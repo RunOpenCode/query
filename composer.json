@@ -1,0 +1,23 @@
+{
+    "name": "runopencode/query",
+    "description": "Write your dynamic queries in separate files, execute them in your repository.",
+    "minimum-stability": "stable",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "Nikola Svitlica a.k.a TheCelavi",
+            "email": "thecelavi@runopencode.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "RunOpenCode\\Component\\Dataset\\": ""
+        },
+        "exclude-from-classmap": [
+            "/Tests/"
+        ]
+    }
+}
