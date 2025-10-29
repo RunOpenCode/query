@@ -1,9 +1,9 @@
 {
     "name": "runopencode/query",
     "description": "Write your dynamic queries in separate files, execute them in your repository.",
-    "minimum-stability": "stable",
-    "license": "proprietary",
+    "minimum-stability": "dev",
     "version": "0.2",
+    "license": "MIT",
     "authors": [
         {
             "name": "Nikola Svitlica a.k.a TheCelavi",
