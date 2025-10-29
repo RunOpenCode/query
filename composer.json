@@ -1,8 +1,6 @@
 {
     "name": "runopencode/query",
     "description": "Write your dynamic queries in separate files, execute them in your repository.",
-    "minimum-stability": "dev",
-    "version": "0.2",
     "license": "MIT",
     "authors": [
         {
@@ -21,5 +19,7 @@
         "psr-4": {
             "RunOpenCode\\Component\\Query\\": "src"
         }
-    }
+    },
+    "version": "0.1.8",
+    "minimum-stability": "dev"
 }
