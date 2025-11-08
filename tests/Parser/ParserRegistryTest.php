@@ -11,6 +11,7 @@ use PHPUnit\Framework\TestCase;
 use RunOpenCode\Component\Query\Contract\Parser\ParserInterface;
 use RunOpenCode\Component\Query\Exception\NotExistsException;
 use RunOpenCode\Component\Query\Parser\ParserRegistry;
+use RunOpenCode\Component\Query\Parser\Variables;
 
 final class ParserRegistryTest extends TestCase
 {
@@ -34,19 +35,23 @@ final class ParserRegistryTest extends TestCase
     #[Test]
     public function uses_referenced_parser(): void
     {
+        $variables = Variables::create(parser: 'foo');
+
         $this
             ->parser
             ->expects($this->once())
             ->method('parse')
-            ->with('bar', [])
+            ->with('bar', $variables)
             ->willReturn('parsed');
 
-        $this->assertSame('parsed', $this->registry->parse('bar', [], 'foo'));
+        $this->assertSame('parsed', $this->registry->parse('bar', $variables));
     }
 
     #[Test]
     public function uses_matching_parser(): void
     {
+        $variables = Variables::default();
+
         $this
             ->parser
             ->expects($this->once())
@@ -58,10 +63,10 @@ final class ParserRegistryTest extends TestCase
             ->parser
             ->expects($this->once())
             ->method('parse')
-            ->with('bar', [])
+            ->with('bar', $variables)
             ->willReturn('parsed');
 
-        $this->assertSame('parsed', $this->registry->parse('bar', []));
+        $this->assertSame('parsed', $this->registry->parse('bar', $variables));
     }
 
     #[Test]
@@ -69,7 +74,7 @@ final class ParserRegistryTest extends TestCase
     {
         $this->expectException(NotExistsException::class);
 
-        $this->registry->parse('foo', [], 'unknown');
+        $this->registry->parse('foo', new Variables(parser: 'bar'));
     }
 
     #[Test]
@@ -84,6 +89,6 @@ final class ParserRegistryTest extends TestCase
             ->with('foo')
             ->willReturn(false);
 
-        $this->registry->parse('foo', []);
+        $this->registry->parse('foo', Variables::default());
     }
 }

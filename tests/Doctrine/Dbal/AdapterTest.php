@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace RunOpenCode\Component\Query\Tests\Doctrine\Dbal;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Driver\Exception as DbalDriverException;
 use Doctrine\DBAL\DriverManager;
+use Doctrine\DBAL\Exception\DeadlockException as DbalDeadlockException;
 use Doctrine\DBAL\TransactionIsolationLevel;
 use PHPUnit\Framework\Attributes\PreCondition;
 use PHPUnit\Framework\Attributes\Test;
@@ -14,7 +16,9 @@ use RunOpenCode\Component\Query\Doctrine\Dbal\Adapter;
 use RunOpenCode\Component\Query\Doctrine\Dbal\Options;
 use RunOpenCode\Component\Query\Doctrine\Parameters\Named;
 use RunOpenCode\Component\Query\Doctrine\Parameters\Positional;
+use RunOpenCode\Component\Query\Doctrine\Transaction;
 use RunOpenCode\Component\Query\Exception\ConnectionException;
+use RunOpenCode\Component\Query\Exception\DeadlockException;
 use RunOpenCode\Component\Query\Exception\DriverException;
 use RunOpenCode\Component\Query\Exception\RuntimeException;
 use RunOpenCode\Component\Query\Exception\SyntaxException;
@@ -37,13 +41,91 @@ final class AdapterTest extends TestCase
     }
 
     #[PreCondition]
-    protected function datasetReady(): void
+    protected function dataset_ready(): void
     {
         $this->assertCount(5, $this->adapter->query('SELECT * FROM test'));
+        $this->assertSame(TransactionIsolationLevel::REPEATABLE_READ, $this->connection->getTransactionIsolation());
     }
 
     #[Test]
-    public function query(): void
+    public function commit_transaction(): void
+    {
+        $configuration = $this->adapter->begin(null);
+
+        $affected  = $this->adapter->statement('DELETE FROM test');
+        $available = $this->adapter->query('SELECT COUNT(*) AS cnt FROM test')->getScalar();
+
+        $this->adapter->commit($configuration);
+
+        $this->assertSame(5, $affected);
+        $this->assertSame(0, $available);
+
+        $actual = $this->adapter->query('SELECT COUNT(*) AS cnt FROM test')->getScalar();
+
+        $this->assertSame(0, $actual);
+    }
+
+    #[Test]
+    public function rollback_transaction(): void
+    {
+        $configuration = $this->adapter->begin(null);
+
+        $affected  = $this->adapter->statement('DELETE FROM test');
+        $available = $this->adapter->query('SELECT COUNT(*) AS cnt FROM test')->getScalar();
+
+        $this->adapter->rollback($configuration);
+
+        $this->assertSame(5, $affected);
+        $this->assertSame(0, $available);
+
+        $actual = $this->adapter->query('SELECT COUNT(*) AS cnt FROM test')->getScalar();
+
+        $this->assertSame(5, $actual);
+    }
+
+    #[Test]
+    public function committed_transaction_with_custom_isolation(): void
+    {
+        $configuration = $this->adapter->begin(Transaction::serializable($this->adapter->name));
+
+        $this->assertSame(5, $this->adapter->statement('DELETE FROM test'));
+        $this->assertSame(TransactionIsolationLevel::SERIALIZABLE, $this->connection->getTransactionIsolation());
+
+        $this->adapter->commit($configuration);
+
+        $this->assertSame(TransactionIsolationLevel::REPEATABLE_READ, $this->connection->getTransactionIsolation());
+    }
+
+    #[Test]
+    public function rolled_back_transaction_with_custom_isolation(): void
+    {
+        $configuration = $this->adapter->begin(Transaction::serializable($this->adapter->name));
+
+        $this->assertSame(5, $this->adapter->statement('DELETE FROM test'));
+        $this->assertSame(TransactionIsolationLevel::SERIALIZABLE, $this->connection->getTransactionIsolation());
+
+        $this->adapter->rollback($configuration);
+
+        $this->assertSame(TransactionIsolationLevel::REPEATABLE_READ, $this->connection->getTransactionIsolation());
+    }
+
+    #[Test]
+    public function transaction_isolation_skipped_when_current_isolation_level_matches_requested(): void
+    {
+        $this->connection->setTransactionIsolation(TransactionIsolationLevel::SERIALIZABLE);
+
+        $configuration = $this->adapter->begin(Transaction::serializable($this->adapter->name));
+
+        $this->assertSame(5, $this->adapter->statement('DELETE FROM test'));
+        $this->assertSame(TransactionIsolationLevel::SERIALIZABLE, $this->connection->getTransactionIsolation());
+
+        $this->adapter->rollback($configuration);
+
+        $this->assertSame(TransactionIsolationLevel::SERIALIZABLE, $this->connection->getTransactionIsolation());
+    }
+
+    #[Test]
+    public function query_without_parameters(): void
     {
         $result = $this->adapter->query('SELECT * FROM test WHERE id = 1');
 
@@ -123,7 +205,7 @@ final class AdapterTest extends TestCase
     }
 
     #[Test]
-    public function isolated_query(): void
+    public function query_with_custom_isolation(): void
     {
         $this->adapter->query('SELECT * FROM test', options: Options::serializable());
 
@@ -134,10 +216,12 @@ final class AdapterTest extends TestCase
             'COMMIT',
             'SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ',
         ], $this->connection);
+
+        $this->assertSame(TransactionIsolationLevel::REPEATABLE_READ, $this->connection->getTransactionIsolation());
     }
 
     #[Test]
-    public function isolated_statement(): void
+    public function statement_with_custom_isolation(): void
     {
         $this->adapter->statement('DELETE FROM test WHERE id = 1', options: Options::serializable());
 
@@ -148,10 +232,12 @@ final class AdapterTest extends TestCase
             'COMMIT',
             'SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ',
         ], $this->connection);
+
+        $this->assertSame(TransactionIsolationLevel::REPEATABLE_READ, $this->connection->getTransactionIsolation());
     }
 
     #[Test]
-    public function isolation_skipped_when_current_isolation_level_matches_requested(): void
+    public function query_isolation_skipped_when_current_isolation_level_matches_requested(): void
     {
         $this->connection->setTransactionIsolation(TransactionIsolationLevel::SERIALIZABLE);
         $this->clearAllDbalLogs();
@@ -161,10 +247,12 @@ final class AdapterTest extends TestCase
         $this->assertSqlLogSame([
             'SELECT * FROM test',
         ], $this->connection);
+
+        $this->assertSame(TransactionIsolationLevel::SERIALIZABLE, $this->connection->getTransactionIsolation());
     }
 
     #[Test]
-    public function throws_syntax_exception(): void
+    public function query_throws_syntax_exception(): void
     {
         $this->expectException(SyntaxException::class);
 
@@ -172,7 +260,7 @@ final class AdapterTest extends TestCase
     }
 
     #[Test]
-    public function throws_driver_exception(): void
+    public function query_throws_driver_exception(): void
     {
         $this->expectException(DriverException::class);
 
@@ -180,7 +268,7 @@ final class AdapterTest extends TestCase
     }
 
     #[Test]
-    public function throws_connection_exception(): void
+    public function query_throws_connection_exception(): void
     {
         $this->expectException(ConnectionException::class);
 
@@ -196,7 +284,26 @@ final class AdapterTest extends TestCase
     }
 
     #[Test]
-    public function throws_runtime_exception(): void
+    public function query_throws_deadlock_exception(): void
+    {
+        $this->expectException(DeadlockException::class);
+
+        $connection = $this->createMock(Connection::class);
+        $adapter    = new Adapter('foo', $connection);
+
+        $connection
+            ->expects($this->once())
+            ->method($this->anything())
+            ->willThrowException(new DbalDeadlockException(
+                $this->createMock(DbalDriverException::class),
+                null,
+            ));
+
+        $adapter->query('SELECT * FROM test');
+    }
+
+    #[Test]
+    public function query_throws_runtime_exception(): void
     {
         $this->expectException(RuntimeException::class);
 
@@ -210,6 +317,4 @@ final class AdapterTest extends TestCase
 
         $adapter->query('SELECT * FROM test');
     }
-
-
 }

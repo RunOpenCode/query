@@ -6,10 +6,12 @@ namespace RunOpenCode\Component\Query\Middleware;
 
 use RunOpenCode\Component\Query\Contract\Middleware\ContextInterface;
 use RunOpenCode\Component\Query\Exception\LogicException;
-use RunOpenCode\Component\Query\Executor\TransactionStack;
+use RunOpenCode\Component\Query\Executor\TransactionScope;
 
 /**
- * Default implementation of ContextInterface.
+ * Default implementation of {@see ContextInterface}.
+ *
+ * @internal
  */
 final readonly class Context implements ContextInterface
 {
@@ -24,11 +26,11 @@ final readonly class Context implements ContextInterface
      * Create execution context.
      *
      * @param object[]          $configuration Configurations for middlewares.
-     * @param ?TransactionStack $transaction   Current transactional scope, if any.
+     * @param ?TransactionScope $transaction   Current transactional scope, if any.
      */
     public function __construct(
         private array            $configuration = [],
-        public ?TransactionStack $transaction = null,
+        public ?TransactionScope $transaction = null,
     ) {
         $this->used = new \WeakMap();
     }

@@ -16,16 +16,54 @@ use RunOpenCode\Component\Query\Exception\OutOfBoundsException;
 final class Variables implements VariablesInterface
 {
     /**
+     * Variables in variable bag.
+     *
+     * @var array<non-empty-string, mixed>
+     */
+    private array $variables = [];
+
+    /**
      * Create instance of variables bag.
      *
-     * @param non-empty-string|null          $parser    Parser to be used with these variables.
-     * @param array<non-empty-string, mixed> $variables Initial variables.
+     * @param non-empty-string|null                             $parser    Parser to be used with these variables.
+     * @param VariablesInterface|array<non-empty-string, mixed> $variables Initial variables.
      */
     public function __construct(
-        public readonly ?string $parser = null,
-        private array           $variables = [],
+        public readonly ?string  $parser = null,
+        VariablesInterface|array $variables = [],
     ) {
-        // noop
+        foreach ($variables as $name => $value) {
+            $this->add($name, $value);
+        }
+    }
+
+    /**
+     * Create new variables bag for default parser.
+     *
+     * @param array<non-empty-string, mixed> $variables Variables to register.
+
+     */
+    public static function default(array $variables = []): self
+    {
+        return new self(null, $variables);
+    }
+
+    /**
+     * Create new variable bag for void parser.
+     */
+    public static function void(): self
+    {
+        return new self(VoidParser::NAME);
+    }
+
+    /**
+     * Create new variables bag for twig parser.
+     *
+     * @param array<non-empty-string, mixed> $variables Variables to register.
+     */
+    public static function twig(array $variables = []): self
+    {
+        return new self(TwigParser::NAME, $variables);
     }
 
     /**
@@ -38,10 +76,6 @@ final class Variables implements VariablesInterface
      */
     public static function create(?string $parser = null, VariablesInterface|array $variables = []): self
     {
-        if ($variables instanceof VariablesInterface) {
-            $variables = \iterator_to_array($variables);
-        }
-
         return new self($parser, $variables);
     }
 
@@ -87,17 +121,9 @@ final class Variables implements VariablesInterface
      */
     public function merge(VariablesInterface|array $other, bool $overwrite = true): VariablesInterface
     {
-        if ($other instanceof VariablesInterface) {
-            $other = \iterator_to_array($other);
-        }
-
-        if ($overwrite) {
-            $this->variables = \array_merge($this->variables, $other);
-            return $this;
-        }
-
         foreach ($other as $name => $value) {
-            $this->add($name, $value);
+            $method = $overwrite ? 'set' : 'add';
+            $this->{$method}($name, $value);
         }
 
         return $this;
@@ -176,7 +202,7 @@ final class Variables implements VariablesInterface
      */
     public function offsetGet($offset): mixed
     {
-        return $this->variables[$offset] ?? throw new OutOfBoundsException(\sprintf(
+        return \array_key_exists($offset, $this->variables) ? $this->variables[$offset] : throw new OutOfBoundsException(\sprintf(
             'Variable "%s" does not exist in variables bag.',
             $offset,
         ));

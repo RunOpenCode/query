@@ -11,7 +11,7 @@ namespace RunOpenCode\Component\Query\Contract\Middleware;
  * during execution. It tracks usage of configurations to notify whether all
  * configurations have been used or not.
  *
- * If not all configurations have been used, it may indicate misconfiguration
+ * If all configurations have not been used, it may indicate misconfiguration
  * of middleware stack or missing middleware that should have used certain
  * configuration.
  */
@@ -21,7 +21,8 @@ interface ContextInterface
      * Peaks configuration object from context.
      *
      * Configuration is requested by providing type of object, and if such object is
-     * found within context, it is returned. If not found, null is returned.
+     * found within context, it is returned. If matching configuration is not found,
+     * null is returned.
      *
      * When configuration object is returned, it is NOT marked as used within context.
      *
@@ -37,7 +38,8 @@ interface ContextInterface
      * Requires configuration object from context.
      *
      * Configuration is requested by providing type of object, and if such object is
-     * found within context, it is returned. If not found, null is returned.
+     * found within context, it is returned. If matching configuration is not found,
+     * null is returned.
      *
      * When configuration object is returned, it is marked as used within context.
      *
@@ -55,7 +57,7 @@ interface ContextInterface
     public function depleted(): bool;
 
     /**
-     * Returns all unused configurations.
+     * Yields all unused configurations.
      *
      * @return iterable<object>
      */

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RunOpenCode\Component\Query\Doctrine;
 
 use Doctrine\DBAL\TransactionIsolationLevel;
-use RunOpenCode\Component\Query\Contract\Executor\TransactionalScope;
 use RunOpenCode\Component\Query\Contract\Executor\TransactionInterface;
 
 /**
@@ -27,9 +26,59 @@ final readonly class Transaction implements TransactionInterface
     public function __construct(
         public string                     $connection,
         public ?TransactionIsolationLevel $isolation = null,
-        public TransactionalScope         $query = TransactionalScope::Strict,
-        public TransactionalScope         $statement = TransactionalScope::Strict,
     ) {
         // noop.
+    }
+
+    /**
+     * Create transaction configuration with READ UNCOMMITED isolation level.
+     *
+     * @param non-empty-string $connection Connection for which transaction scope should be created.
+     */
+    public static function readUncommitted(string $connection): self
+    {
+        return new self(
+            $connection,
+            TransactionIsolationLevel::READ_UNCOMMITTED,
+        );
+    }
+
+    /**
+     * Create transaction configuration with READ COMMITED isolation level.
+     *
+     * @param non-empty-string $connection Connection for which transaction scope should be created.
+     */
+    public static function readCommitted(string $connection): self
+    {
+        return new self(
+            $connection,
+            TransactionIsolationLevel::READ_UNCOMMITTED,
+        );
+    }
+
+    /**
+     * Create transaction configuration with REPEATABLE READ isolation level.
+     *
+     * @param non-empty-string $connection Connection for which transaction scope should be created.
+     */
+    public static function repeatableRead(string $connection): self
+    {
+        return new self(
+            $connection,
+            TransactionIsolationLevel::REPEATABLE_READ,
+        );
+    }
+
+    /**
+     * Create transaction configuration with SERIALIZABLE isolation level.
+     *
+     * @param non-empty-string $connection Connection for which transaction scope should be created.
+     */
+    public static function serializable(string $connection): self
+    {
+        return new self(
+            $connection,
+            TransactionIsolationLevel::SERIALIZABLE,
+        );
     }
 }

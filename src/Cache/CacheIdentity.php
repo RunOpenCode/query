@@ -9,7 +9,7 @@ use RunOpenCode\Component\Query\Contract\Cache\CacheIdentityInterface;
 use RunOpenCode\Component\Query\Exception\UnsupportedException;
 
 /**
- * {@inheritdoc}
+ * This is default implementation of {@see CacheIdentityInterface}.
  *
  * @phpstan-import-type CacheResolverCallable from CacheIdentityInterface
  */
@@ -21,7 +21,7 @@ final readonly class CacheIdentity implements CacheIdentityInterface
     public \Closure $resolver;
 
     /**
-     * Create new dynamic cache identity.
+     * Create new cache identity.
      *
      * @param string                $key      Cache key.
      * @param CacheResolverCallable $resolver A callable that will resolve cache tags and TTL when invoked.
@@ -36,12 +36,15 @@ final readonly class CacheIdentity implements CacheIdentityInterface
     /**
      * Create new static cache identity.
      *
-     * Instead of a dynamic resolver, this method will create
-     * a resolver that will always set the provided tags and TTL.
+     * Instead of providing resolver, this method will create
+     * a resolver that will always set the provided tags and TTL
+     * with given values.
      *
      * @param string        $key  Cache key.
      * @param string[]|null $tags Cache tags.
      * @param int|null      $ttl  Cache time to live in seconds.
+     *
+     * @throws UnsupportedException If cache implementation does not supports tagging (missing `tag` method at concrete implementation of {@see CacheItemInterface}).
      */
     public static function static(string $key, ?array $tags = [], ?int $ttl = null): self
     {

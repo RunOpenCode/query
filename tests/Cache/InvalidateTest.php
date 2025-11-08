@@ -41,4 +41,22 @@ final class InvalidateTest extends TestCase
         yield 'Sanitizes strings.' => ['key1', 'tag1', ['key1'], ['tag1']];
         yield 'Passes through arrays.' => [['key1', 'key2'], ['tag1', 'tag2'], ['key1', 'key2'], ['tag1', 'tag2']];
     }
+
+    #[Test]
+    public function keys(): void
+    {
+        $this->assertSame(
+            ['key1', 'key2'],
+            Invalidate::keys(['key1', 'key2'])->keys
+        );
+    }
+
+    #[Test]
+    public function tags(): void
+    {
+        $this->assertSame(
+            ['tag1', 'tag2'],
+            Invalidate::tags(['tag1', 'tag2'])->tags
+        );
+    }
 }

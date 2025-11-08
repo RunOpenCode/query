@@ -38,4 +38,28 @@ final readonly class Invalidate
         $this->keys = \array_values(\is_string($keys) ? [$keys] : $keys);
         $this->tags = \array_values(\is_string($tags) ? [$tags] : $tags);
     }
+
+    /**
+     * Create cache invalidation command for keys.
+     *
+     * @param string|string[] $keys Keys to invalidate
+     *
+     * @return self
+     */
+    public static function keys(string|array $keys): self
+    {
+        return new self($keys);
+    }
+
+    /**
+     * Create cache invalidation command for tags.
+     *
+     * @param string|string[] $tags Tags to invalidate
+     *
+     * @return self
+     */
+    public static function tags(string|array $tags): self
+    {
+        return new self(tags: $tags);
+    }
 }

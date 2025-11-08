@@ -9,6 +9,9 @@ use RunOpenCode\Component\Query\Parameters\Parameter;
 /**
  * Bag of query parameters.
  *
+ * If adapter supports prepared statements, or any kind of query parameters,
+ * they should be provided via parameters bag.
+ *
  * @phpstan-type NamedParameters = ParametersInterface<non-empty-string>
  * @phpstan-type PositionalParameters = ParametersInterface<non-negative-int>
  * @phpstan-type Parameters = NamedParameters|PositionalParameters

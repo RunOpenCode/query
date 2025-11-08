@@ -11,6 +11,7 @@ use RunOpenCode\Component\Query\Exception\NotExistsException;
 use RunOpenCode\Component\Query\Exception\RuntimeException;
 use RunOpenCode\Component\Query\Exception\SyntaxException;
 use RunOpenCode\Component\Query\Parser\TwigParser;
+use RunOpenCode\Component\Query\Parser\Variables;
 use RunOpenCode\Component\Query\Tests\Fixtures\TwigFactory;
 
 final class TwigParserTest extends TestCase
@@ -48,13 +49,13 @@ final class TwigParserTest extends TestCase
 
     /**
      * @param non-empty-string     $query
-     * @param array<string, mixed> $variables
+     * @param array<non-empty-string, mixed> $variables
      */
     #[Test]
     #[DataProvider('get_data_for_parses')]
     public function parses(string $query, array $variables, string $expected): void
     {
-        $this->assertSame($expected, $this->parser->parse($query, $variables));
+        $this->assertSame($expected, $this->parser->parse($query, Variables::twig($variables)));
     }
 
     /**
@@ -74,7 +75,7 @@ final class TwigParserTest extends TestCase
     {
         $this->expectException(NotExistsException::class);
 
-        $this->parser->parse('foo', []);
+        $this->parser->parse('foo', Variables::twig());
     }
 
     #[Test]
@@ -82,7 +83,7 @@ final class TwigParserTest extends TestCase
     {
         $this->expectException(NotExistsException::class);
 
-        $this->parser->parse('all_users.sql.twig::foo', []);
+        $this->parser->parse('all_users.sql.twig::foo', Variables::twig());
     }
 
     #[Test]
@@ -90,7 +91,7 @@ final class TwigParserTest extends TestCase
     {
         $this->expectException(SyntaxException::class);
 
-        $this->parser->parse('syntax_error.sql.twig', []);
+        $this->parser->parse('syntax_error.sql.twig', Variables::twig());
     }
 
     #[Test]
@@ -98,6 +99,6 @@ final class TwigParserTest extends TestCase
     {
         $this->expectException(RuntimeException::class);
 
-        $this->parser->parse('render_error.sql.twig', []);
+        $this->parser->parse('render_error.sql.twig', Variables::twig());
     }
 }

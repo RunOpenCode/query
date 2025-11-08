@@ -23,7 +23,6 @@ use RunOpenCode\Component\Query\Exception\CommitTransactionException;
 use RunOpenCode\Component\Query\Exception\ConnectionException;
 use RunOpenCode\Component\Query\Exception\DeadlockException;
 use RunOpenCode\Component\Query\Exception\DriverException;
-use RunOpenCode\Component\Query\Exception\ExceptionInterface;
 use RunOpenCode\Component\Query\Exception\IsolationException;
 use RunOpenCode\Component\Query\Exception\LogicException;
 use RunOpenCode\Component\Query\Exception\RollbackTransactionException;
@@ -113,7 +112,7 @@ final readonly class Adapter implements AdapterInterface
             ), $exception);
         } finally {
             /** @var TransactionIsolationLevel|null $isolation */
-            $isolation = $this->isolations->offsetGet($transaction);
+            $isolation = $this->isolations->offsetExists($transaction) ? $this->isolations->offsetGet($transaction) : null;
 
             $this->isolations->offsetUnset($transaction);
 
@@ -143,7 +142,7 @@ final readonly class Adapter implements AdapterInterface
             ), $exception);
         } finally {
             /** @var TransactionIsolationLevel|null $isolation */
-            $isolation = $this->isolations->offsetGet($transaction);
+            $isolation = $this->isolations->offsetExists($transaction) ? $this->isolations->offsetGet($transaction) : null;
 
             $this->isolations->offsetUnset($transaction);
 
@@ -258,9 +257,6 @@ final readonly class Adapter implements AdapterInterface
         try {
             // @phpstan-ignore-next-line
             $result = $isolate ? $this->connection->transactional($invocation) : $invocation($this->connection);
-        } catch (ExceptionInterface $exception) {
-            // Re-throw library exception.
-            throw $exception;
         } catch (GenericDbalConnectionException|DbalConnectionException $exception) {
             throw new ConnectionException(\sprintf(
                 'Connection error occurred while trying to execute SQL query "%s" using executor connection "%s".',

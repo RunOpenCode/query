@@ -39,10 +39,10 @@ interface ParserInterface
     /**
      * Parse given query with provided variables.
      *
-     * @param non-empty-string     $query     Query or reference to a query to parse.
-     * @param array<string, mixed> $variables Variables to use during parsing.
+     * @param non-empty-string   $query     Query or reference to a query to parse.
+     * @param VariablesInterface $variables Variables to use during parsing.
      *
      * @return non-empty-string Parsed query.
      */
-    public function parse(string $query, array $variables): string;
+    public function parse(string $query, VariablesInterface $variables): string;
 }

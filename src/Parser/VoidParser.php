@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RunOpenCode\Component\Query\Parser;
 
 use RunOpenCode\Component\Query\Contract\Parser\ParserInterface;
+use RunOpenCode\Component\Query\Contract\Parser\VariablesInterface;
 
 /**
  * Void parser does not perform any parsing at all.
@@ -13,11 +14,13 @@ use RunOpenCode\Component\Query\Contract\Parser\ParserInterface;
  */
 final class VoidParser implements ParserInterface
 {
+    public const string NAME = 'void';
+
     /**
      * {@inheritdoc}
      */
     public string $name {
-        get => 'void';
+        get => self::NAME;
     }
 
     /**
@@ -31,7 +34,7 @@ final class VoidParser implements ParserInterface
     /**
      * {@inheritdoc}
      */
-    public function parse(string $query, array $variables): string
+    public function parse(string $query, VariablesInterface $variables): string
     {
         return $query;
     }

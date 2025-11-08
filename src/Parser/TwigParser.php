@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RunOpenCode\Component\Query\Parser;
 
 use RunOpenCode\Component\Query\Contract\Parser\ParserInterface;
+use RunOpenCode\Component\Query\Contract\Parser\VariablesInterface;
 use RunOpenCode\Component\Query\Exception\NotExistsException;
 use RunOpenCode\Component\Query\Exception\RuntimeException;
 use RunOpenCode\Component\Query\Exception\SyntaxException;
@@ -27,11 +28,13 @@ use Twig\Error\SyntaxError;
  */
 final class TwigParser implements ParserInterface
 {
+    public const string NAME = 'twig';
+
     /**
      * {@inheritdoc}
      */
     public string $name {
-        get => 'twig';
+        get => self::NAME;
     }
 
     public function __construct(
@@ -53,9 +56,10 @@ final class TwigParser implements ParserInterface
     /**
      * {@inheritdoc}
      */
-    public function parse(string $query, array $variables): string
+    public function parse(string $query, VariablesInterface $variables): string
     {
         [$template, $block] = $this->template($query);
+        $context = \iterator_to_array($variables);
 
         try {
             $wrapper = $this->twig->load($template);
@@ -76,7 +80,7 @@ final class TwigParser implements ParserInterface
             ), $exception);
         }
 
-        if (null !== $block && !$wrapper->hasBlock($block, $variables)) {
+        if (null !== $block && !$wrapper->hasBlock($block, $context)) {
             throw new NotExistsException(\sprintf(
                 'Block "%s" in query source "%s" provided in Twig template does not exists.',
                 $block,
@@ -85,7 +89,7 @@ final class TwigParser implements ParserInterface
         }
 
         try {
-            $parsed = null !== $block ? $wrapper->renderBlock($block, $variables) : $wrapper->render($variables);
+            $parsed = null !== $block ? $wrapper->renderBlock($block, $context) : $wrapper->render($context);
         } catch (\Exception $exception) {
             throw new RuntimeException(\sprintf(
                 'Unknown exception occurred during rendering of query source "%s" contained in Twig template.',

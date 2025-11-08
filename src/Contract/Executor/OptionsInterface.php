@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace RunOpenCode\Component\Query\Contract\Executor;
 
+/**
+ * Value object which configures execution of query and/or statement of executor adapter.
+ */
 interface OptionsInterface
 {
     /**
@@ -28,24 +31,15 @@ interface OptionsInterface
     }
 
     /**
-     * If query/statement is executed inside transactional scope,
-     * configuration can override execution scope verification.
-     *
-     * By default, only execution of query/statement is allowed
-     * inside direct transactional scope of connection in transaction.
-     *
-     * For certain use cases, you may override this behaviour and "loosen"
-     * this rule.
-     *
-     * Modifying configuration of the transactional scope may lead to unexpected
-     * results and weird behaviours.
+     * If provided, overrides {@see ExecutionScope::Strict} rule of execution of
+     * queries/statements within transaction execution scope.
      */
-    public ?TransactionalScope $scope {
+    public ?ExecutionScope $scope {
         get;
     }
 
     /**
-     * Checks query execution is tagged with given tag.
+     * Checks if query/statement execution is tagged with given tag.
      *
      * @param non-empty-string $tag Tag to search for.
      *

@@ -22,17 +22,20 @@ use Symfony\Component\Cache\Adapter\TagAwareAdapter;
  * It provides caching capabilities for query results based on PSR-6 cache pool. It also expose a method
  * to invalidate cache items based on keys or tags.
  *
- * Cache middleware will require from context  to provide either `CacheIdentityInterface` or
- * `CacheIdentifiableInterface` in order to perform caching. However, if no cache pool is provided
- * caching will be effectively disabled.
+ * Cache middleware will require from context  to provide either {@see CacheIdentityInterface} or
+ * {@see CacheIdentifiableInterface} in order to perform caching. However, if no cache pool is provided
+ * caching will be effectively disabled ({@see NullAdapter} will be used).
  *
  * Some runtime checks are performed to ensure valid caching:
  *
  * - If no cache identity is provided in context, caching is skipped.
- * - If the result does not implement `CacheableResultInterface`, a `LogicException` is thrown.
- * - If caching is requested for statement execution, a `LogicException` is thrown.
- * - If cache pool does not support tag invalidation, a `UnsupportedException` is thrown when attempting
+ * - If the result does not implements {@see CacheableResultInterface}, a {@see LogicException} is thrown.
+ * - If caching is requested for statement execution, a {@see LogicException} is thrown.
+ * - If cache pool does not support tag invalidation, a {@see UnsupportedException} is thrown when attempting
  *   to invalidate by tags.
+ *
+ * Note that cache key and cache tags are not sanitized, underlying adapter may throw exception if you use
+ * reserved character in keys/tags.
  *
  * @internal
  */
@@ -48,6 +51,8 @@ final readonly class CacheMiddleware implements MiddlewareInterface
 
     /**
      * {@inheritdoc}
+     *
+     * @throws LogicException If result does not implements {@see CacheableResultInterface}.
      */
     public function query(string $query, ContextInterface $context, callable $next): ResultInterface
     {
@@ -90,6 +95,8 @@ final readonly class CacheMiddleware implements MiddlewareInterface
 
     /**
      * {@inheritdoc}
+     *
+     * @throws LogicException Caching of statements is not supported by design.
      */
     public function statement(string $query, ContextInterface $context, callable $next): int
     {
@@ -108,11 +115,11 @@ final readonly class CacheMiddleware implements MiddlewareInterface
      * If no cache pool is provided, this method will be a noop.
      *
      * If tags are provided for invalidation, but cache pool does not support
-     * tag invalidation, a `LogicException` will be thrown.
+     * tag invalidation, a {@see LogicException} will be thrown.
      *
      * @param Invalidate $invalidate Invalidate instruction.
      *
-     * @throws LogicException If cache pool does not support tag invalidation.
+     * @throws LogicException If cache pool does not support tag invalidation (implementation of {@see CacheItemPoolInterface} does not have method `invalidateTags()`).
      */
     public function invalidate(Invalidate $invalidate): void
     {

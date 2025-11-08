@@ -62,8 +62,6 @@ interface ExecutorInterface
     /**
      * Execute queries and statements inside transactional scope.
      *
-     *
-     *
      * @template T
      *
      * @param callable(ExecutorInterface): T $transactional  Function to be executed inside transactional scope.

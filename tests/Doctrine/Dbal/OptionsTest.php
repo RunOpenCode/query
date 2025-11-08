@@ -28,4 +28,13 @@ final class OptionsTest extends TestCase
         $this->assertSame(TransactionIsolationLevel::REPEATABLE_READ, Options::repeatableRead()->isolation);
         $this->assertSame(TransactionIsolationLevel::SERIALIZABLE, Options::serializable()->isolation);
     }
+
+    #[Test]
+    public function creates_for_connection(): void
+    {
+        $this->assertSame(
+            'foo',
+            Options::connection('foo')->connection,
+        );
+    }
 }

@@ -7,6 +7,7 @@ namespace RunOpenCode\Component\Query\Tests\Parser;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RunOpenCode\Component\Query\Parser\Variables;
 use RunOpenCode\Component\Query\Parser\VoidParser;
 
 final class VoidParserTest extends TestCase
@@ -30,7 +31,7 @@ final class VoidParserTest extends TestCase
     public function passes_through(string $query): void
     {
         $this->assertTrue($this->parser->supports($query));
-        $this->assertSame($query, $this->parser->parse($query, []));
+        $this->assertSame($query, $this->parser->parse($query, Variables::void()));
     }
 
     /**

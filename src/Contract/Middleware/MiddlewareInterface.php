@@ -9,6 +9,9 @@ use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
 /**
  * Execution middleware.
  *
+ * Queries/statements are executed through middleware chain. Each middleware must implement
+ * this interface.
+ *
  * @phpstan-type NextMiddlewareQueryCallable = callable(string, ContextInterface): ResultInterface
  * @phpstan-type NextMiddlewareStatementCallable = callable(string, ContextInterface): int
  */

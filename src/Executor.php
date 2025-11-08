@@ -8,7 +8,7 @@ use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
 use RunOpenCode\Component\Query\Contract\Executor\TransactionInterface;
 use RunOpenCode\Component\Query\Contract\ExecutorInterface;
 use RunOpenCode\Component\Query\Executor\AdapterRegistry;
-use RunOpenCode\Component\Query\Executor\TransactionalScope;
+use RunOpenCode\Component\Query\Executor\TransactionExecutor;
 use RunOpenCode\Component\Query\Middleware\Context;
 use RunOpenCode\Component\Query\Middleware\MiddlewareRegistry;
 
@@ -52,7 +52,7 @@ final readonly class Executor implements ExecutorInterface
     public function transactional(callable $transactional, TransactionInterface ...$transaction): mixed
     {
         /** @var list<TransactionInterface> $transaction */
-        return new TransactionalScope(
+        return new TransactionExecutor(
             $this->middlewares,
             $this->adapters,
             $transactional,

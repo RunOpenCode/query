@@ -8,8 +8,20 @@ use RunOpenCode\Component\Query\Exception\ConnectionException;
 use RunOpenCode\Component\Query\Exception\DriverException;
 use RunOpenCode\Component\Query\Exception\RuntimeException;
 use RunOpenCode\Component\Query\Exception\SyntaxException;
+use RunOpenCode\Component\Query\Exception\TransactionException;
 
 /**
+ * Query executor uses adapters to execute queries and statements.
+ *
+ * Each supported database storage (or abstraction) should implement:
+ *
+ * - Its own adapter, dealing with low level query calls,
+ * - Value object/objects that represents parameters for query execution (if supported by adapter). Based on
+ *   internal workings of adapter, as well as API design decision, implementation may provide support for
+ *   positional and named parameters separately, or all together.
+ * - Value object which configures query and/or statement execution.
+ * - Value object which configures query and/or statement execution within transactional scope.
+ *
  * @phpstan-type NamedParameters = ParametersInterface<non-empty-string>
  * @phpstan-type PositionalParameters = ParametersInterface<non-negative-int>
  * @phpstan-type Parameters = NamedParameters|PositionalParameters
@@ -43,9 +55,14 @@ interface AdapterInterface
      * If configuration is not provided, adapter should use default configuration defined
      * by adapters itself.
      *
-     * @param TTransaction|null $transaction Optional transaction configuration to use, or use default configuration.
+     * @param TTransaction|null $transaction Optional transaction configuration to use, or NULL if default configuration should be used.
      *
      * @return TTransaction Used transaction configuration.
+     *
+     * @throws ConnectionException If connection to data source could not be established.
+     * @throws TransactionException If transaction error occurred.
+     * @throws DriverException If execution fails.
+     * @throws RuntimeException If unknown error occurred.
      */
     public function begin(?TransactionInterface $transaction): TransactionInterface;
 
@@ -53,6 +70,11 @@ interface AdapterInterface
      * Commit current transaction.
      *
      * @param TTransaction $transaction Used transaction configuration for transaction which is being commited.
+     *
+     * @throws ConnectionException If connection to data source could not be established.
+     * @throws TransactionException If transaction error occurred.
+     * @throws DriverException If execution fails.
+     * @throws RuntimeException If unknown error occurred.
      */
     public function commit(TransactionInterface $transaction): void;
 
@@ -60,13 +82,18 @@ interface AdapterInterface
      * Rollback current transaction.
      *
      * @param TTransaction $transaction Used transaction configuration for transaction which is being rolled back.
+     *
+     * @throws ConnectionException If connection to data source could not be established.
+     * @throws TransactionException If transaction error occurred.
+     * @throws DriverException If execution fails.
+     * @throws RuntimeException If unknown error occurred.
      */
     public function rollback(TransactionInterface $transaction): void;
 
     /**
      * Execute selection query.
      *
-     * This query is expected to return rows of data.
+     * This query is expected to return collection of records.
      *
      * @param non-empty-string $query      Query to execute.
      * @param Parameters|null  $parameters Optional parameters for query.

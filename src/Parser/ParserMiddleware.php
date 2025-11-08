@@ -13,7 +13,7 @@ use RunOpenCode\Component\Query\Contract\Parser\VariablesInterface;
 /**
  * Parser middleware.
  *
- * This middleware is responsible for parsing dynamic query
+ * This middleware is responsible for parsing dynamic queries and statements
  * using language from parser registry.
  *
  * @phpstan-import-type Parameters from ParametersInterface
@@ -65,49 +65,12 @@ final readonly class ParserMiddleware implements MiddlewareInterface
          */
         $parameters = $context->peak(ParametersInterface::class);
         $variables  = $context->require(VariablesInterface::class);
-
-        $parsed = $this->registry->parse(
-            $query,
-            $this->vars($context, $variables, $parameters),
-            $variables?->parser,
-        );
+        $parsed     = $this->registry->parse($query, new ContextAwareVariables(
+            $context,
+            $variables,
+            $parameters
+        ));
 
         return $next($parsed, $context);
-    }
-
-    /**
-     * Prepare variables for parser.
-     *
-     * @param ContextInterface        $context    Current middleware context.
-     * @param VariablesInterface|null $variables  Variables bag.
-     * @param Parameters|null         $parameters Parameters bag.
-     *
-     * @return array<non-empty-string, mixed>
-     */
-    private function vars(
-        ContextInterface     $context,
-        ?VariablesInterface  $variables,
-        ?ParametersInterface $parameters
-    ): array {
-        $vars   = null !== $variables ? \iterator_to_array($variables) : [];
-        $params = null !== $parameters ? $parameters->values : [];
-
-        // Ensure both are arrays with string keys
-        if (\array_is_list($params)) {
-            $params = [];
-        }
-
-        /** @var array<non-empty-string, mixed> $params */
-        return \array_merge(
-            $vars,
-            $params,
-            [
-                'context' => [
-                    'variables'  => $variables,
-                    'parameters' => $parameters,
-                    'middleware' => $context,
-                ],
-            ]
-        );
     }
 }
