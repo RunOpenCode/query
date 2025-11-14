@@ -16,7 +16,6 @@ use RunOpenCode\Component\Query\Contract\Parser\VariablesInterface;
  * This middleware is responsible for parsing dynamic queries and statements
  * using language from parser registry.
  *
- * @phpstan-import-type Parameters from ParametersInterface
  * @phpstan-import-type NextMiddlewareQueryCallable from MiddlewareInterface
  * @phpstan-import-type NextMiddlewareStatementCallable from MiddlewareInterface
  *
@@ -58,8 +57,6 @@ final readonly class ParserMiddleware implements MiddlewareInterface
     private function parse(string $query, ContextInterface $context, callable $next): ResultInterface|int
     {
         /**
-         * @var Parameters|null $parameters
-         *
          * NOTE: We use peak here because parameters are consumed by parser,
          * but can not be considered as this middleware configuration.
          */

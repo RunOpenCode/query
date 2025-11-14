@@ -22,10 +22,6 @@ use RunOpenCode\Component\Query\Exception\TransactionException;
  * - Value object which configures query and/or statement execution.
  * - Value object which configures query and/or statement execution within transactional scope.
  *
- * @phpstan-type NamedParameters = ParametersInterface<non-empty-string>
- * @phpstan-type PositionalParameters = ParametersInterface<non-negative-int>
- * @phpstan-type Parameters = NamedParameters|PositionalParameters
- *
  * @template TTransaction of TransactionInterface = TransactionInterface
  * @template TOptions of OptionsInterface = OptionsInterface
  * @template TResult of ResultInterface = ResultInterface
@@ -57,47 +53,41 @@ interface AdapterInterface
      *
      * @param TTransaction|null $transaction Optional transaction configuration to use, or NULL if default configuration should be used.
      *
-     * @return TTransaction Used transaction configuration.
-     *
      * @throws ConnectionException If connection to data source could not be established.
      * @throws TransactionException If transaction error occurred.
      * @throws DriverException If execution fails.
      * @throws RuntimeException If unknown error occurred.
      */
-    public function begin(?TransactionInterface $transaction): TransactionInterface;
+    public function begin(?TransactionInterface $transaction): void;
 
     /**
      * Commit current transaction.
      *
-     * @param TTransaction $transaction Used transaction configuration for transaction which is being commited.
-     *
      * @throws ConnectionException If connection to data source could not be established.
      * @throws TransactionException If transaction error occurred.
      * @throws DriverException If execution fails.
      * @throws RuntimeException If unknown error occurred.
      */
-    public function commit(TransactionInterface $transaction): void;
+    public function commit(): void;
 
     /**
      * Rollback current transaction.
      *
-     * @param TTransaction $transaction Used transaction configuration for transaction which is being rolled back.
-     *
      * @throws ConnectionException If connection to data source could not be established.
      * @throws TransactionException If transaction error occurred.
      * @throws DriverException If execution fails.
      * @throws RuntimeException If unknown error occurred.
      */
-    public function rollback(TransactionInterface $transaction): void;
+    public function rollback(): void;
 
     /**
      * Execute selection query.
      *
      * This query is expected to return collection of records.
      *
-     * @param non-empty-string $query      Query to execute.
-     * @param Parameters|null  $parameters Optional parameters for query.
-     * @param TOptions|null    $options    Optional executor specific options.
+     * @param non-empty-string         $query      Query to execute.
+     * @param ParametersInterface|null $parameters Optional parameters for query.
+     * @param TOptions|null            $options    Optional executor specific options.
      *
      * @return TResult Result of execution.
      *
@@ -113,9 +103,9 @@ interface AdapterInterface
      *
      * This query is expected to perform data manipulation and return number of affected records.
      *
-     * @param non-empty-string $query      Query to execute.
-     * @param Parameters|null  $parameters Optional parameters for query.
-     * @param TOptions|null    $options    Optional executor specific options.
+     * @param non-empty-string         $query      Query to execute.
+     * @param ParametersInterface|null $parameters Optional parameters for query.
+     * @param TOptions|null            $options    Optional executor specific options.
      *
      * @return int Number of affected records.
      *

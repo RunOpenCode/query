@@ -4,34 +4,30 @@ declare(strict_types=1);
 
 namespace RunOpenCode\Component\Query\Contract\Executor;
 
-use RunOpenCode\Component\Query\Parameters\Parameter;
-
 /**
  * Bag of query parameters.
  *
  * If adapter supports prepared statements, or any kind of query parameters,
  * they should be provided via parameters bag.
  *
- * @phpstan-type NamedParameters = ParametersInterface<non-empty-string>
- * @phpstan-type PositionalParameters = ParametersInterface<non-negative-int>
- * @phpstan-type Parameters = NamedParameters|PositionalParameters
+ * @template TParamKey = non-empty-string|non-negative-int
+ * @template TParamType = non-empty-string|\UnitEnum
  *
- * @template TKey of non-empty-string|non-negative-int
+ * @phpstan-type Parameter = array{TParamKey, TParamType, mixed}
  *
- * @extends \IteratorAggregate<TKey, Parameter>
- * @extends \ArrayAccess<TKey, Parameter>
+ * @extends \IteratorAggregate<Parameter>
  */
-interface ParametersInterface extends \IteratorAggregate, \ArrayAccess, \Countable
+interface ParametersInterface extends \IteratorAggregate, \Countable
 {
     /**
-     * @var array<TKey, mixed> Collection of parameter values.
+     * @var array<TParamKey, mixed> Collection of parameter values.
      */
     public array $values {
         get;
     }
 
     /**
-     * @var array<TKey, mixed> Collection of parameter types.
+     * @var array<TParamKey, TParamType> Collection of parameter types.
      */
     public array $types {
         get;

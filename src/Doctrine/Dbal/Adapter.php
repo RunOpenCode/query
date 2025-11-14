@@ -11,19 +11,18 @@ use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\DBAL\Exception\ConnectionException as DbalConnectionException;
 use Doctrine\DBAL\Exception\DeadlockException as DbalDeadlockException;
 use Doctrine\DBAL\Exception\SyntaxErrorException as DbalSyntaxErrorException;
-use Doctrine\DBAL\TransactionIsolationLevel;
 use RunOpenCode\Component\Query\Contract\Executor\AdapterInterface;
 use RunOpenCode\Component\Query\Contract\Executor\OptionsInterface;
 use RunOpenCode\Component\Query\Contract\Executor\ParametersInterface;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
 use RunOpenCode\Component\Query\Contract\Executor\TransactionInterface;
+use RunOpenCode\Component\Query\Doctrine\Isolator;
 use RunOpenCode\Component\Query\Doctrine\Transaction;
 use RunOpenCode\Component\Query\Exception\BeginTransactionException;
 use RunOpenCode\Component\Query\Exception\CommitTransactionException;
 use RunOpenCode\Component\Query\Exception\ConnectionException;
 use RunOpenCode\Component\Query\Exception\DeadlockException;
 use RunOpenCode\Component\Query\Exception\DriverException;
-use RunOpenCode\Component\Query\Exception\IsolationException;
 use RunOpenCode\Component\Query\Exception\LogicException;
 use RunOpenCode\Component\Query\Exception\RollbackTransactionException;
 use RunOpenCode\Component\Query\Exception\RuntimeException;
@@ -39,11 +38,18 @@ use RunOpenCode\Component\Query\Exception\SyntaxException;
 final readonly class Adapter implements AdapterInterface
 {
     /**
-     * Stores original isolation level which was active when transaction started.
+     * A stack of currently active transactions.
      *
-     * @var \WeakMap<TransactionInterface, TransactionIsolationLevel>
+     * @var \SplStack<Transaction>
      */
-    private \WeakMap $isolations;
+    private \SplStack $transactions;
+
+    /**
+     * Instance of transaction level isolation utility.
+     *
+     * @var Isolator
+     */
+    private Isolator $isolator;
 
     /**
      * @param non-empty-string $name
@@ -52,29 +58,24 @@ final readonly class Adapter implements AdapterInterface
         public string     $name,
         public Connection $connection
     ) {
-        $this->isolations = new \WeakMap();
+        $this->transactions = new \SplStack();
+        $this->isolator     = new Isolator($this->name, $this->connection);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function begin(?TransactionInterface $transaction): TransactionInterface
+    public function begin(?TransactionInterface $transaction): void
     {
         $transaction = $transaction ?? new Transaction($this->name);
 
-        if ($transaction->connection !== $this->name) {
-            throw new LogicException(\sprintf(
-                'Transaction for connection "%s" requested, "%s" used.',
-                $transaction->connection,
-                $this->name,
-            ));
-        }
+        \assert($transaction->connection === $this->name, new LogicException(\sprintf(
+            'Transaction for connection "%s" requested, "%s" used.',
+            $transaction->connection,
+            $this->name,
+        )));
 
-        $current = $this->isolate($transaction->isolation);
-
-        if (null !== $current) {
-            $this->isolations->offsetSet($transaction, $current);
-        }
+        $this->isolator->isolate($transaction->isolation);
 
         try {
             $this->connection->beginTransaction();
@@ -90,66 +91,52 @@ final readonly class Adapter implements AdapterInterface
             ), $exception);
         }
 
-        return $transaction;
+        $this->transactions->push($transaction);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function commit(TransactionInterface $transaction): void
+    public function commit(): void
     {
         try {
             $this->connection->commit();
         } catch (GenericDbalConnectionException|DbalConnectionException $exception) {
             throw new ConnectionException(\sprintf(
                 'Unable to commit transaction for connection "%s" due to connection error.',
-                $transaction->connection,
+                $this->name,
             ), $exception);
         } catch (\Exception $exception) {
             throw new CommitTransactionException(\sprintf(
                 'Unable to commit transaction for connection "%s".',
-                $transaction->connection,
+                $this->name,
             ), $exception);
         } finally {
-            /** @var TransactionIsolationLevel|null $isolation */
-            $isolation = $this->isolations->offsetExists($transaction) ? $this->isolations->offsetGet($transaction) : null;
-
-            $this->isolations->offsetUnset($transaction);
-
-            if (null !== $isolation) {
-                // Revert to previous isolation level.
-                $this->isolate($isolation);
-            }
+            $this->transactions->pop();
+            $this->isolator->revert();
         }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function rollback(TransactionInterface $transaction): void
+    public function rollback(): void
     {
         try {
             $this->connection->rollBack();
         } catch (GenericDbalConnectionException|DbalConnectionException $exception) {
             throw new ConnectionException(\sprintf(
                 'Unable to rollback transaction for connection "%s" due to connection error.',
-                $transaction->connection,
+                $this->name,
             ), $exception);
         } catch (\Exception $exception) {
             throw new RollbackTransactionException(\sprintf(
                 'Unable to rollback transaction for connection "%s".',
-                $transaction->connection,
+                $this->name,
             ), $exception);
         } finally {
-            /** @var TransactionIsolationLevel|null $isolation */
-            $isolation = $this->isolations->offsetExists($transaction) ? $this->isolations->offsetGet($transaction) : null;
-
-            $this->isolations->offsetUnset($transaction);
-
-            if (null !== $isolation) {
-                // Revert to previous isolation level.
-                $this->isolate($isolation);
-            }
+            $this->transactions->pop();
+            $this->isolator->revert();
         }
     }
 
@@ -163,7 +150,7 @@ final readonly class Adapter implements AdapterInterface
             return new Result($connection->executeQuery(
                 $query,
                 $parameters->values ?? [],
-                $parameters->types ?? [], // @phpstan-ignore-line
+                $parameters->types ?? [],
             ));
         };
 
@@ -180,60 +167,11 @@ final readonly class Adapter implements AdapterInterface
             return (int)$connection->executeStatement(
                 $query,
                 $parameters->values ?? [],
-                $parameters->types ?? [], // @phpstan-ignore-line
+                $parameters->types ?? [],
             );
         };
 
         return $this->execute($query, $invocation, $options);
-    }
-
-    /**
-     * Set transaction isolation level, if applicable.
-     *
-     * Method will modify current isolation level and return previously used
-     * one, so isolation level could be reverted when transaction/query/statement
-     * is completed.
-     *
-     * If change of isolation level is not requested, or current isolation level
-     * is equal to the requested one, method will skip execution and NULL will be
-     * returned.
-     *
-     * @param TransactionIsolationLevel|null $requested Requested new isolation level.
-     *
-     * @return TransactionIsolationLevel|null Previous isolation level, or null, if reverting to previous isolation level is not needed.
-     *
-     * @throws ConnectionException If there is an issue with database connection.
-     * @throws IsolationException If there is an issue with setting new isolation level.
-     */
-    private function isolate(?TransactionIsolationLevel $requested): ?TransactionIsolationLevel
-    {
-        // Isolation is not requested.
-        if (null === $requested) {
-            return null;
-        }
-
-        try {
-            $current = $this->connection->getTransactionIsolation();
-        } catch (GenericDbalConnectionException|DbalConnectionException $exception) {
-            throw new ConnectionException('Connection error occurred while trying to get transaction isolation level.', $exception);
-        } catch (\Exception $exception) {
-            throw new IsolationException('Unable to get transaction isolation level.', $exception);
-        }
-
-        // Requested isolation is the same as current one.
-        if ($current === $requested) {
-            return null;
-        }
-
-        try {
-            $this->connection->setTransactionIsolation($requested);
-        } catch (GenericDbalConnectionException|DbalConnectionException $exception) {
-            throw new ConnectionException('Connection error occurred while trying to set transaction isolation level.', $exception);
-        } catch (\Exception $exception) {
-            throw new IsolationException('Unable to set transaction isolation level.', $exception);
-        }
-
-        return $current;
     }
 
     /**
@@ -251,8 +189,9 @@ final readonly class Adapter implements AdapterInterface
      */
     private function execute(string $query, callable $invocation, ?Options $options): ResultInterface|int
     {
-        $current = $this->isolate($options?->isolation);
-        $isolate = null !== $current;
+        $isolate = null !== $options?->isolation && $options->isolation !== $this->isolator->get();
+
+        $this->isolator->isolate($options?->isolation);
 
         try {
             // @phpstan-ignore-next-line
@@ -287,7 +226,7 @@ final readonly class Adapter implements AdapterInterface
                 $this->name,
             ), $exception);
         } finally {
-            $this->isolate($current);
+            $this->isolator->revert();
         }
 
         /** @var T $result */

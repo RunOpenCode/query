@@ -52,7 +52,7 @@ final readonly class Transaction implements TransactionInterface
     {
         return new self(
             $connection,
-            TransactionIsolationLevel::READ_UNCOMMITTED,
+            TransactionIsolationLevel::READ_COMMITTED,
         );
     }
 

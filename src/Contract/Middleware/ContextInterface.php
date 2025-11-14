@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace RunOpenCode\Component\Query\Contract\Middleware;
 
+use RunOpenCode\Component\Query\Executor\TransactionScope;
+
 /**
  * Execution context.
  *
@@ -17,6 +19,24 @@ namespace RunOpenCode\Component\Query\Contract\Middleware;
  */
 interface ContextInterface
 {
+    /**
+     * Configuration objects for execution.
+     * 
+     * @var object[]
+     */
+    public array $configurations {
+        get;
+    }
+    
+    /**
+     * Get transaction scope, if available.
+     * 
+     * @var TransactionScope|null
+     */
+    public ?TransactionScope $transaction {
+        get;
+    }
+    
     /**
      * Peaks configuration object from context.
      *

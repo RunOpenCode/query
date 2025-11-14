@@ -18,7 +18,10 @@
     "autoload": {
         "psr-4": {
             "RunOpenCode\\Component\\Query\\": "src"
-        }
+        },
+        "files": [
+            "src/functions.php"
+        ]
     },
     "repositories": [
         {

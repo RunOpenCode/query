@@ -42,8 +42,8 @@ final class TwigParserTest extends TestCase
      */
     public static function get_data_for_supports(): iterable
     {
-        yield 'Query in template.' => ['all_users.sql.twig', true];
-        yield 'Query in template block.' => ['template_with_blocks.sql.twig::get_all_users', true];
+        yield 'Query in template.' => ['twig_parser/all_users.sql.twig', true];
+        yield 'Query in template block.' => ['twig_parser/template_with_blocks.sql.twig::get_all_users', true];
         yield 'Query does not exists.' => ['foo', false];
     }
 
@@ -63,11 +63,11 @@ final class TwigParserTest extends TestCase
      */
     public static function get_data_for_parses(): iterable
     {
-        yield 'Using template, without variables.' => ['all_users.sql.twig', [], "SELECT * FROM users;"];
-        yield 'Using template block, without variables, targeting all users query.' => ['template_with_blocks.sql.twig::get_all_users', [], 'SELECT * FROM users;'];
-        yield 'Using template block, without variables, targeting get user by id query.' => ['template_with_blocks.sql.twig::get_user_by_id', [], 'SELECT * FROM users WHERE id = :id;'];
-        yield 'Using template that utilises variables, without variables.' => ['all_users_or_one.sql.twig', [], 'SELECT * FROM users;'];
-        yield 'Using template that utilises variables, with variables.' => ['all_users_or_one.sql.twig', ['id' => 42], 'SELECT * FROM users WHERE id = :id;'];
+        yield 'Using template, without variables.' => ['twig_parser/all_users.sql.twig', [], "SELECT * FROM users;"];
+        yield 'Using template block, without variables, targeting all users query.' => ['twig_parser/template_with_blocks.sql.twig::get_all_users', [], 'SELECT * FROM users;'];
+        yield 'Using template block, without variables, targeting get user by id query.' => ['twig_parser/template_with_blocks.sql.twig::get_user_by_id', [], 'SELECT * FROM users WHERE id = :id;'];
+        yield 'Using template that utilises variables, without variables.' => ['twig_parser/all_users_or_one.sql.twig', [], 'SELECT * FROM users;'];
+        yield 'Using template that utilises variables, with variables.' => ['twig_parser/all_users_or_one.sql.twig', ['id' => 42], 'SELECT * FROM users WHERE id = :id;'];
     }
 
     #[Test]
@@ -83,7 +83,7 @@ final class TwigParserTest extends TestCase
     {
         $this->expectException(NotExistsException::class);
 
-        $this->parser->parse('all_users.sql.twig::foo', Variables::twig());
+        $this->parser->parse('twig_parser/all_users.sql.twig::foo', Variables::twig());
     }
 
     #[Test]
@@ -91,7 +91,7 @@ final class TwigParserTest extends TestCase
     {
         $this->expectException(SyntaxException::class);
 
-        $this->parser->parse('syntax_error.sql.twig', Variables::twig());
+        $this->parser->parse('twig_parser/syntax_error.sql.twig', Variables::twig());
     }
 
     #[Test]
@@ -99,6 +99,6 @@ final class TwigParserTest extends TestCase
     {
         $this->expectException(RuntimeException::class);
 
-        $this->parser->parse('render_error.sql.twig', Variables::twig());
+        $this->parser->parse('twig_parser/render_error.sql.twig', Variables::twig());
     }
 }

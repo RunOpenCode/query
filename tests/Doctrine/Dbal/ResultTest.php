@@ -145,10 +145,10 @@ final class ResultTest extends TestCase
         $result->getRecord();
     }
 
+    #[Test]
     #[TestWith(['getScalar'], 'Method getScalar()')]
     #[TestWith(['getVector'], 'Method getVector()')]
     #[TestWith(['getRecord'], 'Method getRecord()')]
-    #[Test]
     public function methods_with_variadic_defaults_throw_exception_on_multiple_default_values(string $method): void
     {
         $this->expectException(InvalidArgumentException::class);

@@ -17,11 +17,15 @@ use RunOpenCode\Component\Query\Doctrine\Dbal\Options;
 use RunOpenCode\Component\Query\Doctrine\Parameters\Named;
 use RunOpenCode\Component\Query\Doctrine\Parameters\Positional;
 use RunOpenCode\Component\Query\Doctrine\Transaction;
+use RunOpenCode\Component\Query\Exception\BeginTransactionException;
+use RunOpenCode\Component\Query\Exception\CommitTransactionException;
 use RunOpenCode\Component\Query\Exception\ConnectionException;
 use RunOpenCode\Component\Query\Exception\DeadlockException;
 use RunOpenCode\Component\Query\Exception\DriverException;
+use RunOpenCode\Component\Query\Exception\RollbackTransactionException;
 use RunOpenCode\Component\Query\Exception\RuntimeException;
 use RunOpenCode\Component\Query\Exception\SyntaxException;
+use Doctrine\DBAL\ConnectionException as GenericDbalConnectionException;
 use RunOpenCode\Component\Query\Tests\Fixtures\Dbal\MySqlDatabase;
 use RunOpenCode\Component\Query\Tests\PHPUnit\DbalTools;
 
@@ -50,12 +54,12 @@ final class AdapterTest extends TestCase
     #[Test]
     public function commit_transaction(): void
     {
-        $configuration = $this->adapter->begin(null);
+        $this->adapter->begin(null);
 
         $affected  = $this->adapter->statement('DELETE FROM test');
         $available = $this->adapter->query('SELECT COUNT(*) AS cnt FROM test')->getScalar();
 
-        $this->adapter->commit($configuration);
+        $this->adapter->commit();
 
         $this->assertSame(5, $affected);
         $this->assertSame(0, $available);
@@ -68,12 +72,12 @@ final class AdapterTest extends TestCase
     #[Test]
     public function rollback_transaction(): void
     {
-        $configuration = $this->adapter->begin(null);
+        $this->adapter->begin(null);
 
         $affected  = $this->adapter->statement('DELETE FROM test');
         $available = $this->adapter->query('SELECT COUNT(*) AS cnt FROM test')->getScalar();
 
-        $this->adapter->rollback($configuration);
+        $this->adapter->rollback();
 
         $this->assertSame(5, $affected);
         $this->assertSame(0, $available);
@@ -86,12 +90,12 @@ final class AdapterTest extends TestCase
     #[Test]
     public function committed_transaction_with_custom_isolation(): void
     {
-        $configuration = $this->adapter->begin(Transaction::serializable($this->adapter->name));
+        $this->adapter->begin(Transaction::serializable($this->adapter->name));
 
         $this->assertSame(5, $this->adapter->statement('DELETE FROM test'));
         $this->assertSame(TransactionIsolationLevel::SERIALIZABLE, $this->connection->getTransactionIsolation());
 
-        $this->adapter->commit($configuration);
+        $this->adapter->commit();
 
         $this->assertSame(TransactionIsolationLevel::REPEATABLE_READ, $this->connection->getTransactionIsolation());
     }
@@ -99,12 +103,12 @@ final class AdapterTest extends TestCase
     #[Test]
     public function rolled_back_transaction_with_custom_isolation(): void
     {
-        $configuration = $this->adapter->begin(Transaction::serializable($this->adapter->name));
+        $this->adapter->begin(Transaction::serializable($this->adapter->name));
 
         $this->assertSame(5, $this->adapter->statement('DELETE FROM test'));
         $this->assertSame(TransactionIsolationLevel::SERIALIZABLE, $this->connection->getTransactionIsolation());
 
-        $this->adapter->rollback($configuration);
+        $this->adapter->rollback();
 
         $this->assertSame(TransactionIsolationLevel::REPEATABLE_READ, $this->connection->getTransactionIsolation());
     }
@@ -114,12 +118,12 @@ final class AdapterTest extends TestCase
     {
         $this->connection->setTransactionIsolation(TransactionIsolationLevel::SERIALIZABLE);
 
-        $configuration = $this->adapter->begin(Transaction::serializable($this->adapter->name));
+        $this->adapter->begin(Transaction::serializable($this->adapter->name));
 
         $this->assertSame(5, $this->adapter->statement('DELETE FROM test'));
         $this->assertSame(TransactionIsolationLevel::SERIALIZABLE, $this->connection->getTransactionIsolation());
 
-        $this->adapter->rollback($configuration);
+        $this->adapter->rollback();
 
         $this->assertSame(TransactionIsolationLevel::SERIALIZABLE, $this->connection->getTransactionIsolation());
     }
@@ -249,6 +253,122 @@ final class AdapterTest extends TestCase
         ], $this->connection);
 
         $this->assertSame(TransactionIsolationLevel::SERIALIZABLE, $this->connection->getTransactionIsolation());
+    }
+    
+    #[Test]
+    public function begin_transaction_throws_connection_exception(): void
+    {
+        $this->expectException(ConnectionException::class);
+
+        $adapter = new Adapter('foo', DriverManager::getConnection([
+            'driver'   => 'mysqli',
+            'dbname'   => MySqlDatabase::Foo->value,
+            'user'     => 'foo',
+            'password' => 'foo',
+            'host'     => 'mysql.local',
+        ]));
+        
+        $adapter->begin(null);
+    }
+    
+    #[Test]
+    public function begin_transaction_throws_transaction_exception(): void
+    {
+        $this->expectException(BeginTransactionException::class);
+        
+        $connection = $this->createMock(Connection::class);
+        $adapter    = new Adapter('foo', $connection);
+        
+        $connection
+            ->expects($this->once())
+            ->method('beginTransaction')
+            ->willThrowException(new \Exception());
+        
+        $adapter->begin(null);
+    }
+
+    #[Test]
+    public function commit_transaction_throws_connection_exception(): void
+    {
+        $this->expectException(ConnectionException::class);
+
+        $connection = $this->createMock(Connection::class);
+        $adapter    = new Adapter('foo', $connection);
+
+        $connection
+            ->expects($this->once())
+            ->method('beginTransaction');
+        
+        $connection
+            ->expects($this->once())
+            ->method('commit')
+            ->willThrowException(new GenericDbalConnectionException());
+
+        $adapter->begin(null);
+        $adapter->commit();
+    }
+
+    #[Test]
+    public function commit_transaction_throws_transaction_exception(): void
+    {
+        $this->expectException(CommitTransactionException::class);
+
+        $connection = $this->createMock(Connection::class);
+        $adapter    = new Adapter('foo', $connection);
+
+        $connection
+            ->expects($this->once())
+            ->method('beginTransaction');
+
+        $connection
+            ->expects($this->once())
+            ->method('commit')
+            ->willThrowException(new \Exception());
+
+        $adapter->begin(null);
+        $adapter->commit();
+    }
+
+    #[Test]
+    public function rollback_transaction_throws_connection_exception(): void
+    {
+        $this->expectException(ConnectionException::class);
+
+        $connection = $this->createMock(Connection::class);
+        $adapter    = new Adapter('foo', $connection);
+
+        $connection
+            ->expects($this->once())
+            ->method('beginTransaction');
+
+        $connection
+            ->expects($this->once())
+            ->method('rollBack')
+            ->willThrowException(new GenericDbalConnectionException());
+
+        $adapter->begin(null);
+        $adapter->rollback();
+    }
+
+    #[Test]
+    public function rollback_transaction_throws_transaction_exception(): void
+    {
+        $this->expectException(RollbackTransactionException::class);
+
+        $connection = $this->createMock(Connection::class);
+        $adapter    = new Adapter('foo', $connection);
+
+        $connection
+            ->expects($this->once())
+            ->method('beginTransaction');
+
+        $connection
+            ->expects($this->once())
+            ->method('rollBack')
+            ->willThrowException(new \Exception());
+
+        $adapter->begin(null);
+        $adapter->rollback();
     }
 
     #[Test]

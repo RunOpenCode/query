@@ -7,6 +7,7 @@ namespace RunOpenCode\Component\Query\Middleware;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
 use RunOpenCode\Component\Query\Contract\Middleware\MiddlewareInterface;
 use RunOpenCode\Component\Query\Exception\LogicException;
+use RunOpenCode\Component\Query\Executor\ExecutorMiddleware;
 
 /**
  * Middleware registry and chain builder.
@@ -38,10 +39,20 @@ final readonly class MiddlewareRegistry
     public function __construct(
         private iterable $middlewares
     ) {
-        $middlewares     = \is_array($this->middlewares) ? $this->middlewares : \iterator_to_array($this->middlewares, false);
-        $reversed        = \array_values(\array_reverse($middlewares));
-        $this->query     = $this->build($reversed, 'query');
-        $this->statement = $this->build($reversed, 'statement');
+        $middlewares = \is_array($this->middlewares) ? $this->middlewares : \iterator_to_array($this->middlewares, false);
+        $middlewares = \array_values(\array_reverse($middlewares));
+        $executor    = \array_shift($middlewares);
+
+        if (!$executor instanceof ExecutorMiddleware) {
+            throw new LogicException(\sprintf(
+                'Last middleware must be instance of %s, %s given.',
+                ExecutorMiddleware::class,
+                \get_debug_type($executor)
+            ));
+        }
+
+        $this->query     = $this->build($executor, $middlewares, 'query');
+        $this->statement = $this->build($executor, $middlewares, 'statement');
     }
 
     /**
@@ -78,42 +89,31 @@ final readonly class MiddlewareRegistry
      *
      * @return ($method is 'query' ? NextMiddlewareQueryCallable : NextMiddlewareStatementCallable)
      */
-    private function build(array $middlewares, string $method): callable
+    private function build(ExecutorMiddleware $executor, array $middlewares, string $method): callable
     {
-        $last = self::last(...);
+        $last = static function(string $query, Context $context) use ($executor, $method): ResultInterface|int {
+            // @phpstan-ignore-next-line
+            $result = $executor->{$method}($query, $context, static fn(): never => throw new LogicException('Last middleware should not call next middleware.'));
+
+            if (!$context->depleted()) {
+                throw new LogicException(\sprintf(
+                    'Unused execution middleware configurations detected: "%s". Did you forgot to register middleware in middleware chain, or it has been removed?',
+                    \implode('", "', \array_map(
+                        static fn(object $configuration): string => $configuration::class,
+                        \iterator_to_array($context->unused())
+                    )),
+                ));
+            }
+
+            return $result;
+        };
 
         foreach ($middlewares as $middleware) {
             // @phpstan-ignore-next-line
             $last = static fn(string $query, Context $context): ResultInterface|int => $middleware->{$method}($query, $context, $last);
         }
+
         // @phpstan-ignore-next-line
         return $last;
-    }
-
-    /**
-     * Last, safe-guard middleware in chain.
-     *
-     * This last middleware will ensure that context is fully depleted when reached. If not,
-     * it will throw LogicException indicating which configurations were left unused.
-     *
-     * @param non-empty-string $query
-     * @param Context          $context
-     *
-     * @return null
-     *
-     * @throws LogicException When context is not depleted.
-     */
-    private static function last(string $query, Context $context): null
-    {
-        if ($context->depleted()) {
-            return null;
-        }
-
-        $unused = \array_map(static fn(object $configuration): string => $configuration::class, \iterator_to_array($context->unused()));
-
-        throw new LogicException(\sprintf(
-            'Configurations from the context are not depleted, there are unused configurations: "%s".',
-            \implode('", "', $unused),
-        ));
     }
 }

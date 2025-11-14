@@ -5,16 +5,20 @@ declare(strict_types=1);
 namespace RunOpenCode\Component\Query\Doctrine\Parameters;
 
 use Doctrine\DBAL\ArrayParameterType;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Types\Types;
 use RunOpenCode\Component\Query\Contract\Executor\ParametersInterface;
 use RunOpenCode\Component\Query\Exception\LogicException;
-use RunOpenCode\Component\Query\Parameters\Named as NamedParametersBag;
-use RunOpenCode\Component\Query\Parameters\Parameter;
+
+use function RunOpenCode\Component\Query\enum_value;
+use function RunOpenCode\Component\Query\to_date_time_immutable;
 
 /**
  * Named parameters bag for Doctrine queries.
  *
- * @implements ParametersInterface<non-empty-string>
+ * @phpstan-type DbalParameterType = ArrayParameterType|ParameterType|non-empty-string|null
+ *
+ * @implements ParametersInterface<non-empty-string, DbalParameterType>
  */
 final class Named implements ParametersInterface
 {
@@ -22,41 +26,54 @@ final class Named implements ParametersInterface
      * {@inheritdoc}
      */
     public array $values {
-        get => $this->bag->values;
+        get => \array_map(
+            static fn(array $param): mixed => $param[1],
+            $this->parameters
+        );
     }
 
     /**
      * {@inheritdoc}
      */
     public array $types {
-        get => $this->bag->types;
+        get => \array_map(
+            static fn(array $param): mixed => $param[0],
+            $this->parameters
+        );
     }
 
-    private readonly NamedParametersBag $bag;
+    /**
+     * @var array<non-empty-string, array{DbalParameterType, mixed}>
+     */
+    private array $parameters = [];
 
     /**
-     * Creates new instance of named parameters bag for Doctrine queries.
-     *
-     * @param array<non-empty-string, Parameter> $parameters
+     * Creates new instance of named parameters bag.
      */
-    public function __construct(
-        array $parameters = [],
-    ) {
-        $this->bag = new NamedParametersBag($parameters);
+    public function __construct()
+    {
+        // noop
     }
 
     /**
      * Add new parameter to the bag.
      *
-     * @param non-empty-string                         $name  Parameter name.
-     * @param mixed                                    $value Parameter value.
-     * @param ArrayParameterType|non-empty-string|null $type  Optional parameter type.
+     * @param non-empty-string  $name  Parameter name.
+     * @param mixed             $value Parameter value.
+     * @param DbalParameterType $type  Optional parameter type.
      *
      * @throws LogicException If parameter with given name already exists.
      */
-    public function add(string $name, mixed $value, ArrayParameterType|string|null $type = null): self
+    public function add(string $name, mixed $value, ArrayParameterType|ParameterType|string|null $type = null): self
     {
-        $this->bag->add($name, $value, $type);
+        if (\array_key_exists($name, $this->parameters)) {
+            throw new LogicException(\sprintf(
+                'Cannot add parameter "%s" to parameters bag. Parameter with the same name already exists.',
+                $name,
+            ));
+        }
+
+        $this->parameters[$name] = [$type, $value];
 
         return $this;
     }
@@ -66,19 +83,19 @@ final class Named implements ParametersInterface
      *
      * If parameter with given name already exists it will be overwritten.
      *
-     * @param non-empty-string                         $name  Parameter name.
-     * @param mixed                                    $value Parameter value.
-     * @param ArrayParameterType|non-empty-string|null $type  Optional parameter type.
+     * @param non-empty-string  $name  Parameter name.
+     * @param mixed             $value Parameter value.
+     * @param DbalParameterType $type  Optional parameter type.
      */
-    public function set(string $name, mixed $value, ArrayParameterType|string|null $type = null): self
+    public function set(string $name, mixed $value, ArrayParameterType|ParameterType|string|null $type = null): self
     {
-        $this->bag->set($name, $value, $type);
+        $this->parameters[$name] = [$type, $value];
 
         return $this;
     }
 
     /**
-     * Removes parameter from the bag.
+     * Remove parameter from the bag.
      *
      * If parameter with given name does not exist, no action is performed.
      *
@@ -86,20 +103,27 @@ final class Named implements ParametersInterface
      */
     public function remove(string $name): self
     {
-        $this->bag->remove($name);
+        unset($this->parameters[$name]);
 
         return $this;
     }
 
     /**
-     * Merges another parameters bag into this one.
+     * Merge another parameters bag into this one.
      *
-     * @param ParametersInterface<non-empty-string> $parameters Parameters bag to merge from.
-     * @param bool                                  $overwrite  If set to true existing parameters will be overwritten.
+     * @param ParametersInterface<non-empty-string, DbalParameterType> $parameters Parameters bag to merge from.
+     * @param bool                                                     $overwrite  If set to true existing parameters will be overwritten.
      */
     public function merge(ParametersInterface $parameters, bool $overwrite = true): self
     {
-        $this->bag->merge($parameters, $overwrite);
+        foreach ($parameters as [$name, $type, $value]) {
+            if ($overwrite) {
+                $this->set($name, $value, $type);
+                continue;
+            }
+
+            $this->add($name, $value, $type);
+        }
 
         return $this;
     }
@@ -180,7 +204,7 @@ final class Named implements ParametersInterface
      */
     public function dateImmutable(string $name, ?\DateTimeInterface $value): self
     {
-        return $this->set($name, $value ? \DateTimeImmutable::createFromInterface($value) : null, Types::DATE_IMMUTABLE);
+        return $this->set($name, to_date_time_immutable($value), Types::DATE_IMMUTABLE);
     }
 
     /**
@@ -213,7 +237,7 @@ final class Named implements ParametersInterface
      */
     public function dateTimeImmutable(string $name, ?\DateTimeInterface $value): self
     {
-        return $this->set($name, $value ? \DateTimeImmutable::createFromInterface($value) : null, Types::DATETIME_IMMUTABLE);
+        return $this->set($name, to_date_time_immutable($value), Types::DATETIME_IMMUTABLE);
     }
 
     /**
@@ -235,7 +259,7 @@ final class Named implements ParametersInterface
      */
     public function dateTimeTzImmutable(string $name, ?\DateTimeInterface $value): self
     {
-        return $this->set($name, $value ? \DateTimeImmutable::createFromInterface($value) : null, Types::DATETIMETZ_IMMUTABLE);
+        return $this->set($name, to_date_time_immutable($value), Types::DATETIMETZ_IMMUTABLE);
     }
 
     /**
@@ -362,7 +386,7 @@ final class Named implements ParametersInterface
      */
     public function timeImmutable(string $name, ?\DateTimeInterface $value): self
     {
-        return $this->set($name, $value ? \DateTimeImmutable::createFromInterface($value) : null, Types::TIME_IMMUTABLE);
+        return $this->set($name, to_date_time_immutable($value), Types::TIME_IMMUTABLE);
     }
 
     /**
@@ -385,24 +409,21 @@ final class Named implements ParametersInterface
      * ```
      *
      * @param non-empty-string $name  Parameter name.
-     * @param ?\UnitEnum       $value Parameter value.
+     * @param \UnitEnum|null   $value Parameter value.
      *
      * @return self
      */
     public function enum(string $name, ?\UnitEnum $value): self
     {
-        if (null === $value) {
-            return $this->set($name, null);
-        }
+        $extracted = enum_value($value);
 
-        $reflection = new \ReflectionEnum($value::class);
+        match (true) {
+            null === $extracted => $this->set($name, null),
+            \is_string($extracted) => $this->string($name, $extracted),
+            \is_int($extracted) => $this->integer($name, $extracted),
+        };
 
-        if (!$reflection->isBacked()) {
-            return $this->string($name, $value->name);
-        }
-
-        /** @var \BackedEnum $value */
-        return \is_string($value->value) ? $this->string($name, $value->value) : $this->integer($name, $value->value);
+        return $this;
     }
 
     /**
@@ -410,8 +431,8 @@ final class Named implements ParametersInterface
      *
      * If you provide null value, or empty iterable, the parameter will be set to null.
      *
-     * @param non-empty-string $name  Parameter name.
-     * @param ?iterable<int>   $value Parameter value.
+     * @param non-empty-string   $name  Parameter name.
+     * @param iterable<int>|null $value Parameter value.
      *
      * @return self
      */
@@ -533,27 +554,17 @@ final class Named implements ParametersInterface
             return $this->set($name, null);
         }
 
-        $value = \is_array($value) ? $value : \iterator_to_array($value);
+        $values    = [];
+        $hasString = false;
 
-        if (0 === \count($value)) {
-            return $this->set($name, null);
+        foreach ($value as $current) {
+            $extracted = enum_value($current);
+            $hasString = $hasString || \is_string($extracted);
+            $values[]  = $extracted;
         }
 
-        $hasString = false;
-        $values    = [];
-
-        foreach ($value as $item) {
-            $reflection = new \ReflectionEnum($item);
-
-            if (!$reflection->isBacked()) {
-                $values[]  = $item->name;
-                $hasString = true;
-                continue;
-            }
-
-            /** @var \BackedEnum $item */
-            $values[]  = $item->value;
-            $hasString = $hasString || \is_string($item->value);
+        if (0 === \count($values)) {
+            return $this->set($name, null);
         }
 
         // @phpstan-ignore-next-line
@@ -565,43 +576,9 @@ final class Named implements ParametersInterface
      */
     public function getIterator(): \Traversable
     {
-        return $this->bag->{__FUNCTION__}(...\func_get_args());
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function offsetExists(mixed $offset): bool
-    {
-        // @phpstan-ignore-next-line
-        return $this->bag->{__FUNCTION__}(...\func_get_args());
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function offsetGet(mixed $offset): Parameter
-    {
-        // @phpstan-ignore-next-line
-        return $this->bag->{__FUNCTION__}(...\func_get_args());
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function offsetSet(mixed $offset, mixed $value): void
-    {
-        // @phpstan-ignore-next-line
-        $this->bag->{__FUNCTION__}(...\func_get_args());
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function offsetUnset(mixed $offset): void
-    {
-        // @phpstan-ignore-next-line
-        $this->bag->{__FUNCTION__}(...\func_get_args());
+        foreach ($this->parameters as $name => [$type, $value]) {
+            yield [$name, $type, $value];
+        }
     }
 
     /**
@@ -609,6 +586,6 @@ final class Named implements ParametersInterface
      */
     public function count(): int
     {
-        return $this->bag->{__FUNCTION__}(...\func_get_args());
+        return \count($this->parameters);
     }
 }

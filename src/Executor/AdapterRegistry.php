@@ -21,20 +21,20 @@ final readonly class AdapterRegistry
     private array $registry;
 
     /**
-     * @param iterable<non-empty-string, AdapterInterface> $executors
+     * @param iterable<AdapterInterface> $executors
      */
     public function __construct(iterable $executors = [])
     {
         $registry = [];
 
-        foreach ($executors as $connection => $executor) {
+        foreach ($executors as $executor) {
             // Ensure that executor for connection is not already registered.
-            \assert(!isset($registry[$connection]), new LogicException(\sprintf(
-                'Executor for connection name "%s" is already registered in registry.',
-                $connection
+            \assert(!isset($registry[$executor->name]), new LogicException(\sprintf(
+                'Executor with same connection name "%s" is already registered in registry.',
+                $executor->name,
             )));
 
-            $registry[$connection] = $executor;
+            $registry[$executor->name] = $executor;
         }
 
         $this->registry = $registry;

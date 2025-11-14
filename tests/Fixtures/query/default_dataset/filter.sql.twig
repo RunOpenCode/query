@@ -1,0 +1,15 @@
+SELECT * 
+FROM test 
+WHERE 1
+    
+{% if id is defined %}
+    AND id = :id;
+{% endif %}
+
+{% if title is defined %}
+    AND title LIKE :title;
+{% endif %}
+    
+{% if description is defined %}
+    AND description LIKE :description;
+{% endif %}    

@@ -1,0 +1,111 @@
+<?php
+
+declare(strict_types=1);
+
+namespace RunOpenCode\Component\Query\Tests\Parser;
+
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Runtime\PropertyHook;
+use PHPUnit\Framework\TestCase;
+use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
+use RunOpenCode\Component\Query\Contract\Parser\ParserInterface;
+use RunOpenCode\Component\Query\Contract\Parser\VariablesInterface;
+use RunOpenCode\Component\Query\Doctrine\Parameters\Named;
+use RunOpenCode\Component\Query\Middleware\Context;
+use RunOpenCode\Component\Query\Parser\ContextAwareVariables;
+use RunOpenCode\Component\Query\Parser\ParserMiddleware;
+use RunOpenCode\Component\Query\Parser\ParserRegistry;
+use RunOpenCode\Component\Query\Parser\Variables;
+
+final class ParserMiddlewareTest extends TestCase
+{
+    private ParserInterface&MockObject $parser;
+
+    private ParserMiddleware $middleware;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->parser     = $this->createMock(ParserInterface::class);
+        $this->middleware = new ParserMiddleware(new ParserRegistry([
+            $this->parser,
+        ]));
+
+        $this
+            ->parser
+            ->method(PropertyHook::get('name'))
+            ->willReturn('foo');
+
+        $this
+            ->parser
+            ->method('supports')
+            ->willReturn(true);
+    }
+
+    #[Test]
+    public function parses_query(): void
+    {
+        $vars    = new Variables()->add('baz', 'qux');
+        $params  = new Named()->add('foo', 'bar');
+        $context = new Context(configurations: [$params, $vars]);
+
+        $this
+            ->parser
+            ->expects($this->once())
+            ->method('parse')
+            ->with(
+                $this->callback(function(string $query): bool {
+                    $this->assertSame('foo', $query);
+                    return true;
+                }),
+                $this->callback(function(VariablesInterface $variables) use ($vars, $params, $context): bool {
+                    $this->assertInstanceOf(ContextAwareVariables::class, $variables);
+                    $this->assertSame([
+                        'foo'        => 'bar',
+                        'baz'        => 'qux',
+                        'variables'  => $vars,
+                        'parameters' => $params,
+                        'context'    => $context,
+                    ], \iterator_to_array($variables));
+                    return true;
+                }),
+            )
+            ->willReturn('foo_parsed');
+
+        $this->middleware->query('foo', $context, fn(): ResultInterface => $this->createMock(ResultInterface::class));
+    }
+
+    #[Test]
+    public function parses_statement(): void
+    {
+        $vars    = new Variables()->add('baz', 'qux');
+        $params  = new Named()->add('foo', 'bar');
+        $context = new Context(configurations: [$params, $vars]);
+
+        $this
+            ->parser
+            ->expects($this->once())
+            ->method('parse')
+            ->with(
+                $this->callback(function(string $query): bool {
+                    $this->assertSame('foo', $query);
+                    return true;
+                }),
+                $this->callback(function(VariablesInterface $variables) use ($vars, $params, $context): bool {
+                    $this->assertInstanceOf(ContextAwareVariables::class, $variables);
+                    $this->assertSame([
+                        'foo'        => 'bar',
+                        'baz'        => 'qux',
+                        'variables'  => $vars,
+                        'parameters' => $params,
+                        'context'    => $context,
+                    ], \iterator_to_array($variables));
+                    return true;
+                }),
+            )
+            ->willReturn('foo_parsed');
+
+        $this->middleware->statement('foo', $context, fn(): int => 0);
+    }
+}

@@ -9,7 +9,6 @@ use RunOpenCode\Component\Query\Contract\Middleware\ContextInterface;
 use RunOpenCode\Component\Query\Contract\Parser\VariablesInterface;
 use RunOpenCode\Component\Query\Exception\LogicException;
 use RunOpenCode\Component\Query\Exception\OutOfBoundsException;
-use RunOpenCode\Component\Query\Parameters\Parameter;
 
 /**
  * A variable bag which consist of parameters, variables and middleware context.
@@ -30,8 +29,6 @@ use RunOpenCode\Component\Query\Parameters\Parameter;
  * That means that variables and parameters with name `variables`, `parameters` and `context` will not
  * be available directly.
  *
- * @phpstan-import-type Parameters from ParametersInterface
- *
  * @internal
  */
 final readonly class ContextAwareVariables implements VariablesInterface
@@ -49,25 +46,20 @@ final readonly class ContextAwareVariables implements VariablesInterface
     /**
      * Create frozen, context aware variable bag.
      *
-     * @param ContextInterface        $context    Execution context.
-     * @param VariablesInterface|null $variables  Variables to use for query/statement parsing.
-     * @param Parameters|null         $parameters Parameters to use for query/statement parsing.
+     * @param ContextInterface         $context    Execution context.
+     * @param VariablesInterface|null  $variables  Variables to use for query/statement parsing.
+     * @param ParametersInterface|null $parameters Parameters to use for query/statement parsing.
      */
     public function __construct(
         ContextInterface     $context,
         ?VariablesInterface  $variables,
         ?ParametersInterface $parameters,
     ) {
+        /** @var array<non-empty-string, mixed> $params */
+        $params          = $parameters?->values && !\array_is_list($parameters->values) ? $parameters->values : [];
         $this->parser    = $variables?->parser;
         $this->variables = \array_merge(
-            \array_filter(
-                \array_map(
-                    static fn(Parameter $parameter): mixed => $parameter->value,
-                    $parameters ? \iterator_to_array($parameters) : []
-                ),
-                static fn(string|int $key): bool => \is_string($key),
-                \ARRAY_FILTER_USE_KEY
-            ),
+            $params,
             $variables ? \iterator_to_array($variables) : [],
             [
                 'variables'  => $variables,
@@ -113,7 +105,7 @@ final readonly class ContextAwareVariables implements VariablesInterface
     /**
      * {@inheritdoc}
      */
-    public function merge(array|VariablesInterface $other, bool $overwrite = true): VariablesInterface
+    public function merge(VariablesInterface|array $other, bool $overwrite = true): VariablesInterface
     {
         throw new LogicException(\sprintf(
             'This implementation of "%s" is frozen for mutations.',

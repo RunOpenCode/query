@@ -25,11 +25,11 @@ final readonly class Context implements ContextInterface
     /**
      * Create execution context.
      *
-     * @param object[]          $configuration Configurations for middlewares.
-     * @param ?TransactionScope $transaction   Current transactional scope, if any.
+     * @param object[]          $configurations Configurations for middlewares.
+     * @param ?TransactionScope $transaction    Current transactional scope, if any.
      */
     public function __construct(
-        private array            $configuration = [],
+        public array             $configurations = [],
         public ?TransactionScope $transaction = null,
     ) {
         $this->used = new \WeakMap();
@@ -40,13 +40,7 @@ final readonly class Context implements ContextInterface
      */
     public function peak(string $type): ?object
     {
-        foreach ($this->configuration as $configuration) {
-            if (\is_a($configuration, $type)) {
-                return $configuration;
-            }
-        }
-
-        return null;
+        return \array_find($this->configurations, static fn($configuration): bool => \is_a($configuration, $type));
     }
 
     /**
@@ -77,7 +71,7 @@ final readonly class Context implements ContextInterface
      */
     public function depleted(): bool
     {
-        return $this->used->count() === \count($this->configuration);
+        return $this->used->count() === \count($this->configurations);
     }
 
     /**
@@ -85,7 +79,7 @@ final readonly class Context implements ContextInterface
      */
     public function unused(): iterable
     {
-        foreach ($this->configuration as $configuration) {
+        foreach ($this->configurations as $configuration) {
             if (!$this->used->offsetExists($configuration)) {
                 yield $configuration;
             }

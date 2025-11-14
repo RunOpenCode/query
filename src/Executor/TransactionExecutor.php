@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace RunOpenCode\Component\Query\Executor;
 
-use RunOpenCode\Component\Query\Contract\Executor\AdapterInterface;
-use RunOpenCode\Component\Query\Contract\Executor\OptionsInterface;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
-use RunOpenCode\Component\Query\Contract\Executor\ExecutionScope;
 use RunOpenCode\Component\Query\Contract\Executor\TransactionInterface;
 use RunOpenCode\Component\Query\Contract\ExecutorInterface;
 use RunOpenCode\Component\Query\Exception\TransactionScopeRollbackException;
@@ -47,6 +44,11 @@ final class TransactionExecutor implements ExecutorInterface
     private bool $closed;
 
     /**
+     * Denotes if executor is in current execution scope.
+     */
+    private bool $current;
+
+    /**
      * Create new transaction executor.
      *
      * @param MiddlewareRegistry             $middlewares    Registry of middlewares.
@@ -64,6 +66,7 @@ final class TransactionExecutor implements ExecutorInterface
         $this->configurations = $configurations;
         $this->scope          = null;
         $this->closed         = false;
+        $this->current        = false;
 
         $this->assertValidScope();
     }
@@ -83,44 +86,36 @@ final class TransactionExecutor implements ExecutorInterface
             throw new LogicException('Execution of this transaction is closed.');
         }
 
-        $this->closed   = true;
         $configurations = empty($this->configurations) ? [null] : $this->configurations;
-
-        /**
-         * A list of adapters and applied configurations for which transaction successfully started.
-         *
-         * @var list<array{AdapterInterface, TransactionInterface}> $transactional
-         */
-        $transactional = [];
+        $adapters       = [];
 
         try {
             foreach ($configurations as $configuration) {
-                $adapter       = $this->adapters->get($configuration?->connection);
-                $configuration = $adapter->begin($configuration);
+                $adapter = $this->adapters->get($configuration?->connection);
 
-                $transactional[] = [$adapter, $configuration];
+                $adapter->begin($configuration);
+
+                $adapters[] = $adapter;
             }
 
-            $this->scope = new TransactionScope(\array_map(
-                static fn(array $current): TransactionInterface => $current[1],
-                $transactional,
-            ), $parent);
+            $this->scope   = new TransactionScope($adapters, $parent);
+            $this->current = true;
 
             $result = ($this->callable)($this);
 
-            foreach ($transactional as [$adapter, $configuration]) {
-                $adapter->commit($configuration);
+            foreach ($adapters as $adapter) {
+                $adapter->commit();
             }
 
             return $result;
         } catch (\Exception $exception) {
             $trace = [];
 
-            foreach ($transactional as [$adapter, $configuration]) {
+            foreach ($adapters as $adapter) {
                 try {
-                    $adapter->rollback($configuration);
+                    $adapter->rollback();
                 } catch (\Exception $exception) {
-                    $trace[$configuration->connection] = $exception;
+                    $trace[$adapter->name] = $exception;
                 }
             }
 
@@ -128,6 +123,9 @@ final class TransactionExecutor implements ExecutorInterface
                 'Unable to rollback transaction for connections: "%s".',
                 \implode('", "', \array_keys($trace))
             ), $exception, ...\array_values($trace));
+        } finally {
+            $this->closed  = true;
+            $this->current = false;
         }
     }
 
@@ -136,27 +134,22 @@ final class TransactionExecutor implements ExecutorInterface
      */
     public function query(string $query, object ...$configuration): ResultInterface
     {
+        if ($this->closed) {
+            throw new LogicException('Execution of this transaction is closed.');
+        }
+
+        if (!$this->current) {
+            throw new LogicException('You are invoking method of executor which is not in current transactional scope.');
+        }
+
         \assert(null !== $this->scope);
 
         $context = new Context(
-            configuration: $configuration,
+            configurations: $configuration,
             transaction: $this->scope,
         );
 
-        $options    = $context->peak(OptionsInterface::class);
-        $scope      = $options->scope ?? ExecutionScope::Strict;
-        $connection = $options->connection ?? $this->adapters->get()->name;
-
-        if ($this->scope->accepts($connection, $scope)) {
-            return $this->middlewares->query($query, $context);
-        }
-
-        throw new LogicException(\sprintf(
-            'Execution of query "%s" using connection "%s" within transaction violates current transactional scope execution configuration "%s".',
-            $query,
-            $connection,
-            $scope->name,
-        ));
+        return $this->middlewares->query($query, $context);
     }
 
     /**
@@ -164,27 +157,22 @@ final class TransactionExecutor implements ExecutorInterface
      */
     public function statement(string $query, object ...$configuration): int
     {
+        if ($this->closed) {
+            throw new LogicException('Execution of this transaction is closed.');
+        }
+
+        if (!$this->current) {
+            throw new LogicException('You are invoking method of executor which is not in current transactional scope.');
+        }
+
         \assert(null !== $this->scope);
 
         $context = new Context(
-            configuration: $configuration,
+            configurations: $configuration,
             transaction: $this->scope,
         );
 
-        $options    = $context->peak(OptionsInterface::class);
-        $scope      = $options->scope ?? ExecutionScope::Strict;
-        $connection = $options->connection ?? $this->adapters->get()->name;
-
-        if ($this->scope->accepts($connection, $scope)) {
-            return $this->middlewares->statement($query, $context);
-        }
-
-        throw new LogicException(\sprintf(
-            'Execution of statement "%s" using connection "%s" within transaction violates current transactional scope execution configuration "%s".',
-            $query,
-            $connection,
-            $scope->name,
-        ));
+        return $this->middlewares->statement($query, $context);
     }
 
     /**
@@ -192,15 +180,26 @@ final class TransactionExecutor implements ExecutorInterface
      */
     public function transactional(callable $transactional, TransactionInterface ...$transaction): mixed
     {
+        if (!$this->current) {
+            throw new LogicException('You are invoking method of executor which is not in current transactional scope.');
+        }
+
         \assert(null !== $this->scope);
 
-        /** @var list<TransactionInterface> $transaction */
-        return new self(
+        $executor = new self(
             $this->middlewares,
             $this->adapters,
             $transactional,
-            $transaction,
-        )->__invoke($this->scope);
+            \array_values($transaction),
+        );
+
+        $this->current = false;
+
+        try {
+            return $executor->__invoke($this->scope);
+        } finally {
+            $this->current = true;
+        }
     }
 
     /**

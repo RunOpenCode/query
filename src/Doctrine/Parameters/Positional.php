@@ -5,16 +5,23 @@ declare(strict_types=1);
 namespace RunOpenCode\Component\Query\Doctrine\Parameters;
 
 use Doctrine\DBAL\ArrayParameterType;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Types\Types;
 use RunOpenCode\Component\Query\Contract\Executor\ParametersInterface;
 use RunOpenCode\Component\Query\Exception\OutOfBoundsException;
-use RunOpenCode\Component\Query\Parameters\Parameter;
-use RunOpenCode\Component\Query\Parameters\Positional as PositionalParametersBag;
+use function RunOpenCode\Component\Query\enum_value;
+use function RunOpenCode\Component\Query\to_date_time_immutable;
 
 /**
- * Named parameters bag for Doctrine queries.
+ * Positional parameters bag.
  *
- * @implements ParametersInterface<non-negative-int>
+ * Do note that positional parameters are 0-based indexed, and
+ * every removal of parameter will cause reindexing of the
+ * remaining parameters.
+ *
+ * @phpstan-type DbalParameterType = ArrayParameterType|ParameterType|non-empty-string|null
+ *
+ * @implements ParametersInterface<non-negative-int, DbalParameterType>
  */
 final class Positional implements ParametersInterface
 {
@@ -22,38 +29,44 @@ final class Positional implements ParametersInterface
      * {@inheritdoc}
      */
     public array $values {
-        get => $this->bag->values;
+        get => \array_map(
+            static fn(array $param): mixed => $param[1],
+            $this->parameters,
+        );
     }
 
     /**
      * {@inheritdoc}
      */
     public array $types {
-        get => $this->bag->types;
+        get => \array_map(
+            static fn(array $param): mixed => $param[0],
+            $this->parameters
+        );
     }
 
-    private readonly PositionalParametersBag $bag;
+    /**
+     * @var list<array{DbalParameterType, mixed}>
+     */
+    private array $parameters = [];
 
     /**
-     * Creates new instance of named parameters bag for Doctrine queries.
-     *
-     * @param list<Parameter> $parameters
+     * Creates new instance of positional parameters bag.
      */
-    public function __construct(
-        array $parameters = [],
-    ) {
-        $this->bag = new PositionalParametersBag($parameters);
+    public function __construct()
+    {
+        // noop
     }
 
     /**
      * Add new parameter to the bag.
      *
-     * @param mixed                                    $value Parameter value.
-     * @param ArrayParameterType|non-empty-string|null $type  Optional parameter type.
+     * @param mixed             $value Parameter value.
+     * @param DbalParameterType $type  Optional parameter type.
      */
-    public function add(mixed $value, ArrayParameterType|string|null $type = null): self
+    public function add(mixed $value, ArrayParameterType|ParameterType|string|null $type = null): self
     {
-        $this->bag->add($value, $type);
+        $this->parameters[] = [$type, $value];
 
         return $this;
     }
@@ -63,21 +76,29 @@ final class Positional implements ParametersInterface
      *
      * If parameter with given offset already exists it will be overwritten.
      *
-     * @param non-negative-int                         $offset Parameter offset.
-     * @param mixed                                    $value  Parameter value.
-     * @param ArrayParameterType|non-empty-string|null $type   Optional parameter type.
+     * @param non-negative-int  $offset Parameter offset.
+     * @param mixed             $value  Parameter value.
+     * @param DbalParameterType $type   Optional parameter type.
      *
      * @throws OutOfBoundsException If trying to set parameter at offset greater than current maximum offset.
      */
-    public function set(int $offset, mixed $value, ArrayParameterType|string|null $type = null): self
+    public function set(int $offset, mixed $value, mixed $type = null): self
     {
-        $this->bag->set($offset, $value, $type);
+        if ($offset > \count($this->parameters)) {
+            throw new OutOfBoundsException(\sprintf(
+                'Cannot set parameter at offset "%s". Maximum allowed offset is "%d".',
+                $offset,
+                \count($this->parameters)
+            ));
+        }
+
+        $this->parameters[$offset] = [$type, $value];
 
         return $this;
     }
 
     /**
-     * Removes parameter from the bag.
+     * Remove parameter from the bag.
      *
      * If parameter with given offset does not exist, no action is performed.
      * Removal will cause reindexing of the remaining parameters.
@@ -86,7 +107,26 @@ final class Positional implements ParametersInterface
      */
     public function remove(int $offset): self
     {
-        $this->bag->remove($offset);
+        // @phpstan-ignore-next-line
+        unset($this->parameters[$offset]);
+
+        $this->parameters = \array_values($this->parameters);
+
+        return $this;
+    }
+
+    /**
+     * Merge another parameters bag into this one.
+     *
+     * All values will be appended to this parameter bag, offsets/names will be ignored.
+     *
+     * @param ParametersInterface<non-negative-int, DbalParameterType>|ParametersInterface<non-empty-string, DbalParameterType> $parameters Parameters bag to merge from.
+     */
+    public function merge(ParametersInterface $parameters): self
+    {
+        foreach ($parameters as [, $type, $value]) {
+            $this->add($value, $type);
+        }
 
         return $this;
     }
@@ -160,7 +200,7 @@ final class Positional implements ParametersInterface
      */
     public function dateImmutable(?\DateTimeInterface $value): self
     {
-        return $this->add($value ? \DateTimeImmutable::createFromInterface($value) : null, Types::DATE_IMMUTABLE);
+        return $this->add(to_date_time_immutable($value), Types::DATE_IMMUTABLE);
     }
 
     /**
@@ -190,7 +230,7 @@ final class Positional implements ParametersInterface
      */
     public function dateTimeImmutable(?\DateTimeInterface $value): self
     {
-        return $this->add($value ? \DateTimeImmutable::createFromInterface($value) : null, Types::DATETIME_IMMUTABLE);
+        return $this->add(to_date_time_immutable($value), Types::DATETIME_IMMUTABLE);
     }
 
     /**
@@ -210,7 +250,7 @@ final class Positional implements ParametersInterface
      */
     public function dateTimeTzImmutable(?\DateTimeInterface $value): self
     {
-        return $this->add($value ? \DateTimeImmutable::createFromInterface($value) : null, Types::DATETIMETZ_IMMUTABLE);
+        return $this->add(to_date_time_immutable($value), Types::DATETIMETZ_IMMUTABLE);
     }
 
     /**
@@ -324,7 +364,7 @@ final class Positional implements ParametersInterface
      */
     public function timeImmutable(?\DateTimeInterface $value): self
     {
-        return $this->add($value ? \DateTimeImmutable::createFromInterface($value) : null, Types::TIME_IMMUTABLE);
+        return $this->add(to_date_time_immutable($value), Types::TIME_IMMUTABLE);
     }
 
     /**
@@ -352,18 +392,15 @@ final class Positional implements ParametersInterface
      */
     public function enum(?\UnitEnum $value): self
     {
-        if (null === $value) {
-            return $this->add(null);
-        }
+        $extracted = enum_value($value);
 
-        $reflection = new \ReflectionEnum($value::class);
+        match (true) {
+            null === $extracted => $this->add(null),
+            \is_string($extracted) => $this->string($extracted),
+            \is_int($extracted) => $this->integer($extracted),
+        };
 
-        if (!$reflection->isBacked()) {
-            return $this->string($value->name);
-        }
-
-        /** @var \BackedEnum $value */
-        return \is_string($value->value) ? $this->string($value->value) : $this->integer($value->value);
+        return $this;
     }
 
     /**
@@ -487,27 +524,17 @@ final class Positional implements ParametersInterface
             return $this->add(null);
         }
 
-        $value = \is_array($value) ? $value : \iterator_to_array($value);
+        $values    = [];
+        $hasString = false;
 
-        if (0 === \count($value)) {
-            return $this->add(null);
+        foreach ($value as $current) {
+            $extracted = enum_value($current);
+            $hasString = $hasString || \is_string($extracted);
+            $values[]  = $extracted;
         }
 
-        $hasString = false;
-        $values    = [];
-
-        foreach ($value as $item) {
-            $reflection = new \ReflectionEnum($item);
-
-            if (!$reflection->isBacked()) {
-                $values[]  = $item->name;
-                $hasString = true;
-                continue;
-            }
-
-            /** @var \BackedEnum $item */
-            $values[]  = $item->value;
-            $hasString = $hasString || \is_string($item->value);
+        if (0 === \count($values)) {
+            return $this->add(null);
         }
 
         // @phpstan-ignore-next-line
@@ -519,43 +546,9 @@ final class Positional implements ParametersInterface
      */
     public function getIterator(): \Traversable
     {
-        return $this->bag->{__FUNCTION__}(...\func_get_args());
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function offsetExists(mixed $offset): bool
-    {
-        // @phpstan-ignore-next-line
-        return $this->bag->{__FUNCTION__}(...\func_get_args());
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function offsetGet(mixed $offset): Parameter
-    {
-        // @phpstan-ignore-next-line
-        return $this->bag->{__FUNCTION__}(...\func_get_args());
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function offsetSet(mixed $offset, mixed $value): void
-    {
-        // @phpstan-ignore-next-line
-        $this->bag->{__FUNCTION__}(...\func_get_args());
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function offsetUnset(mixed $offset): void
-    {
-        // @phpstan-ignore-next-line
-        $this->bag->{__FUNCTION__}(...\func_get_args());
+        foreach ($this->parameters as $name => [$type, $value]) {
+            yield [$name, $type, $value];
+        }
     }
 
     /**
@@ -563,6 +556,6 @@ final class Positional implements ParametersInterface
      */
     public function count(): int
     {
-        return $this->bag->{__FUNCTION__}(...\func_get_args());
+        return \count($this->parameters);
     }
 }
