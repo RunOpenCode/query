@@ -21,22 +21,22 @@ interface ContextInterface
 {
     /**
      * Configuration objects for execution.
-     * 
+     *
      * @var object[]
      */
     public array $configurations {
         get;
     }
-    
+
     /**
      * Get transaction scope, if available.
-     * 
+     *
      * @var TransactionScope|null
      */
     public ?TransactionScope $transaction {
         get;
     }
-    
+
     /**
      * Peaks configuration object from context.
      *
@@ -44,15 +44,31 @@ interface ContextInterface
      * found within context, it is returned. If matching configuration is not found,
      * null is returned.
      *
+     * You may peak for configuration object by its reference as well.
+     *
      * When configuration object is returned, it is NOT marked as used within context.
      *
      * @template T of object
      *
-     * @param class-string<T> $type
+     * @param class-string<T>|T $type
      *
      * @return T|null
      */
-    public function peak(string $type): ?object;
+    public function peak(object|string $type): ?object;
+
+    /**
+     * Filter configurations within context.
+     *
+     * Filtering does NOT marks configuration object as used within context.
+     *
+     * @template T
+     *
+     * @param callable(($type is null ? object : T)): bool $predicate Filter function applied to configurations.
+     * @param class-string<T>|null                         $type      You may optionally provide which types of configurations should be subject of filtering.
+     *
+     * @return ($type is null ? list<object> : list<T>)
+     */
+    public function filter(callable $predicate, ?string $type = null): array;
 
     /**
      * Requires configuration object from context.
@@ -63,13 +79,16 @@ interface ContextInterface
      *
      * When configuration object is returned, it is marked as used within context.
      *
+     * You may also require configuration object by reference which automatically
+     * marks object as used within context.
+     *
      * @template T of object
      *
-     * @param class-string<T> $type
+     * @param class-string<T>|T $type
      *
      * @return T|null
      */
-    public function require(string $type): ?object;
+    public function require(object|string $type): ?object;
 
     /**
      * Indicates whether context is depleted (has no unused configurations).
@@ -82,4 +101,11 @@ interface ContextInterface
      * @return iterable<object>
      */
     public function unused(): iterable;
+
+    /**
+     * Yields all used configurations.
+     *
+     * @return iterable<object>
+     */
+    public function used(): iterable;
 }

@@ -37,7 +37,7 @@ interface AdapterInterface
      *
      * Each registered adapter within executor must have unique name.
      *
-     * @return non-empty-string
+     * @var non-empty-string
      */
     public string $name {
         get;

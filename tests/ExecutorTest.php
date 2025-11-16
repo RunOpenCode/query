@@ -12,6 +12,8 @@ use RunOpenCode\Component\Query\Contract\ExecutorInterface;
 use RunOpenCode\Component\Query\Doctrine\Dbal\Adapter;
 use RunOpenCode\Component\Query\Doctrine\Parameters\Named;
 use RunOpenCode\Component\Query\Doctrine\Parameters\Positional;
+use RunOpenCode\Component\Query\Doctrine\Replica\Replica;
+use RunOpenCode\Component\Query\Doctrine\Replica\ReplicaMiddleware;
 use RunOpenCode\Component\Query\Exception\LogicException;
 use RunOpenCode\Component\Query\Executor;
 use RunOpenCode\Component\Query\Middleware\MiddlewareRegistry;
@@ -44,6 +46,11 @@ final class ExecutorTest extends TestCase
                 new TwigParser(TwigFactory::create()),
                 new VoidParser(),
             ])),
+            new ReplicaMiddleware(
+                null,
+                ['baz'],
+                $adapters
+            ),
             new Executor\ExecutorMiddleware($adapters),
         ]), $adapters);
     }
@@ -161,6 +168,32 @@ final class ExecutorTest extends TestCase
 
         $this->executor->transactional(function(): int {
             return $this->executor->transactional(static fn(): int => 1);
+        });
+    }
+
+    #[Test]
+    public function fetch_from_replica(): void
+    {
+        $result = $this->executor->query(
+            'default_dataset/filter.sql.twig',
+            new Named()->integer('id', 1),
+            new Replica(),
+        );
+
+        $this->assertNull($result->getRecord(null));
+    }
+    
+    #[Test]
+    public function fetch_from_replica_within_transaction_throws_exception(): void
+    {
+        $this->expectException(LogicException::class);
+        
+        $this->executor->transactional(function(ExecutorInterface $executor): ResultInterface {
+            return $executor->query(
+                'default_dataset/filter.sql.twig',
+                new Named()->integer('id', 1),
+                new Replica(),
+            );
         });
     }
 }

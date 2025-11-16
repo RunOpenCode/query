@@ -38,15 +38,32 @@ final readonly class Context implements ContextInterface
     /**
      * {@inheritdoc}
      */
-    public function peak(string $type): ?object
+    public function peak(object|string $type): ?object
     {
-        return \array_find($this->configurations, static fn($configuration): bool => \is_a($configuration, $type));
+        // @phpstan-ignore-next-line
+        return \array_find(
+            $this->configurations,
+            static fn(object $configuration): bool => \is_string($type) ? \is_a($configuration, $type) : $type === $configuration
+        );
     }
 
     /**
      * {@inheritdoc}
      */
-    public function require(string $type): ?object
+    public function filter(callable $predicate, ?string $type = null): array
+    {
+        $configurations = \array_filter(
+            $this->configurations,
+            static fn(object $configuration): bool => !\is_string($type) || \is_a($configuration, $type)
+        );
+
+        return \array_values(\array_filter($configurations, $predicate));
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function require(object|string $type): ?object
     {
         $configuration = $this->peak($type);
 
@@ -57,7 +74,7 @@ final readonly class Context implements ContextInterface
         if ($this->used->offsetExists($configuration)) {
             throw new LogicException(\sprintf(
                 'Configuration of type "%s" has already been used by previous middleware.',
-                $type
+                \is_string($type) ? $type : \get_debug_type($type),
             ));
         }
 
@@ -81,6 +98,18 @@ final readonly class Context implements ContextInterface
     {
         foreach ($this->configurations as $configuration) {
             if (!$this->used->offsetExists($configuration)) {
+                yield $configuration;
+            }
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function used(): iterable
+    {
+        foreach ($this->configurations as $configuration) {
+            if ($this->used->offsetExists($configuration)) {
                 yield $configuration;
             }
         }

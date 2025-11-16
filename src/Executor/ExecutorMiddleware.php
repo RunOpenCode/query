@@ -55,7 +55,7 @@ final readonly class ExecutorMiddleware implements MiddlewareInterface
         $adapter    = $this->registry->get($options?->connection);
         $scope      = $options->scope ?? ExecutionScope::Strict;
         $accepts    = null !== $context->transaction ? $context->transaction->accepts(...) : static fn(): true => true;
-
+        
         if (!$accepts($adapter, $scope)) {
             throw new LogicException(\sprintf(
                 'Execution of %s using connection "%s" within current transaction violates current execution scope configuration "%s".',
