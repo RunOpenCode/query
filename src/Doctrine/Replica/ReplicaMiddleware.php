@@ -36,13 +36,15 @@ final readonly class ReplicaMiddleware implements MiddlewareInterface
      * @param non-empty-string|null                             $primary  Primary connection name for which replicas can be used (or null for default connection).
      * @param non-empty-list<non-empty-string>|non-empty-string $replicas Connection name or names of database replicas.
      * @param AdapterRegistry                                   $adapters Registered connection adapters.
+     * @param FallbackStrategy                                  $fallback Default fallback strategy to use, if not provided.
      * @param bool                                              $disabled Flag denoting if replicas are disabled (useful for development/testing environment).
      */
     public function __construct(
-        ?string                 $primary,
-        array|string            $replicas,
-        private AdapterRegistry $adapters,
-        private bool            $disabled = false,
+        ?string                  $primary,
+        array|string             $replicas,
+        private AdapterRegistry  $adapters,
+        private FallbackStrategy $fallback = FallbackStrategy::Primary,
+        private bool             $disabled = false,
     ) {
         $this->primary  = $primary ?? $this->adapters->get()->name;
         $this->replicas = (array)$replicas;
@@ -117,17 +119,17 @@ final readonly class ReplicaMiddleware implements MiddlewareInterface
     /**
      * {@inheritdoc}
      */
-    public function statement(string $query, ContextInterface $context, callable $next): int
+    public function statement(string $statement, ContextInterface $context, callable $next): int
     {
         $configuration = $context->require(Replica::class);
 
         if (null === $configuration) {
-            return $next($query, $context);
+            return $next($statement, $context);
         }
 
         throw new LogicException(\sprintf(
             'Replica must not be used for executing statement "%s", only queries.',
-            $query,
+            $statement,
         ));
     }
 
@@ -147,7 +149,7 @@ final readonly class ReplicaMiddleware implements MiddlewareInterface
             \shuffle($replicas);
         }
 
-        return match ($configuration->fallback) {
+        return match ($configuration->fallback ?? $this->fallback) {
             FallbackStrategy::Any => [...$replicas, $this->primary],
             FallbackStrategy::None => [$replicas[0]],
             FallbackStrategy::Primary => [$replicas[0], $this->primary],
@@ -175,6 +177,7 @@ final readonly class ReplicaMiddleware implements MiddlewareInterface
         );
 
         $replicaContext = new Context(
+            source: $context->source,
             configurations: [
                 ...$configurations,
                 $replicatedOptions,

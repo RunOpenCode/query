@@ -48,7 +48,7 @@ final class ParserMiddlewareTest extends TestCase
     {
         $vars    = new Variables()->add('baz', 'qux');
         $params  = new Named()->add('foo', 'bar');
-        $context = new Context(configurations: [$params, $vars]);
+        $context = new Context(source: 'foo', configurations: [$params, $vars]);
 
         $this
             ->parser
@@ -81,7 +81,7 @@ final class ParserMiddlewareTest extends TestCase
     {
         $vars    = new Variables()->add('baz', 'qux');
         $params  = new Named()->add('foo', 'bar');
-        $context = new Context(configurations: [$params, $vars]);
+        $context = new Context(source: 'foo', configurations: [$params, $vars]);
 
         $this
             ->parser

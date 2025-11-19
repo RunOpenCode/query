@@ -10,8 +10,6 @@ use RunOpenCode\Component\Query\Exception\RuntimeException;
 
 /**
  * Registry of all executor adapters.
- *
- * @internal
  */
 final readonly class AdapterRegistry
 {
@@ -21,31 +19,31 @@ final readonly class AdapterRegistry
     private array $registry;
 
     /**
-     * @param iterable<AdapterInterface> $executors
+     * @param iterable<AdapterInterface> $adapters
      */
-    public function __construct(iterable $executors = [])
+    public function __construct(iterable $adapters = [])
     {
         $registry = [];
 
-        foreach ($executors as $executor) {
+        foreach ($adapters as $adapter) {
             // Ensure that executor for connection is not already registered.
-            \assert(!isset($registry[$executor->name]), new LogicException(\sprintf(
-                'Executor with same connection name "%s" is already registered in registry.',
-                $executor->name,
+            \assert(!isset($registry[$adapter->name]), new LogicException(\sprintf(
+                'Executor adapter with same connection name "%s" is already registered in registry.',
+                $adapter->name,
             )));
 
-            $registry[$executor->name] = $executor;
+            $registry[$adapter->name] = $adapter;
         }
 
         $this->registry = $registry;
     }
 
     /**
-     * Get executor by connection name.
+     * Get executor adapter by connection name.
      *
      * If connection name is not provided, first registered adapter will be returned.
      *
-     * @param non-empty-string|null $connection Connection name used by executor, or default if not provided.
+     * @param non-empty-string|null $connection Connection name used by executor adapter, or default if not provided.
      *
      * @return AdapterInterface
      *
@@ -58,7 +56,7 @@ final readonly class AdapterRegistry
         }
 
         return $this->registry[$connection] ?? throw new RuntimeException(\sprintf(
-            'Executor for connection name "%s" does not exists.',
+            'Executor adapter for connection name "%s" does not exists.',
             $connection
         ));
     }

@@ -145,6 +145,7 @@ final class TransactionExecutor implements ExecutorInterface
         \assert(null !== $this->scope);
 
         $context = new Context(
+            source: $query,
             configurations: $configuration,
             transaction: $this->scope,
         );
@@ -155,7 +156,7 @@ final class TransactionExecutor implements ExecutorInterface
     /**
      * {@inheritdoc}
      */
-    public function statement(string $query, object ...$configuration): int
+    public function statement(string $statement, object ...$configuration): int
     {
         if ($this->closed) {
             throw new LogicException('Execution of this transaction is closed.');
@@ -168,11 +169,12 @@ final class TransactionExecutor implements ExecutorInterface
         \assert(null !== $this->scope);
 
         $context = new Context(
+            source: $statement,
             configurations: $configuration,
             transaction: $this->scope,
         );
 
-        return $this->middlewares->statement($query, $context);
+        return $this->middlewares->statement($statement, $context);
     }
 
     /**

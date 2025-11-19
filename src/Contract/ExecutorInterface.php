@@ -44,7 +44,7 @@ interface ExecutorInterface
     /**
      * Execute statement through middleware chain.
      *
-     * @param non-empty-string $query            Query to execute.
+     * @param non-empty-string $statement        Statement to execute.
      * @param object           ...$configuration Configuration objects for middlewares.
      *
      * @return int Number of affected records.
@@ -57,7 +57,7 @@ interface ExecutorInterface
      * @throws InvalidArgumentException If middleware configuration is invalid.
      * @throws LogicException If there is a problem with execution logic and requires either reconfiguration or refactoring.
      */
-    public function statement(string $query, object ...$configuration): int;
+    public function statement(string $statement, object ...$configuration): int;
 
     /**
      * Execute queries and statements inside transactional scope.
@@ -68,6 +68,8 @@ interface ExecutorInterface
      * @param TransactionInterface           ...$transaction Transaction configuration, denoting which connections should create
      *                                                       transactional scope. If none provided, default will be used.
      *
+     * @return T
+     *
      * @throws ConnectionException If there is a connection problem while executing transaction.
      * @throws SyntaxErrorException If statement/query within transaction has syntax errors, or if syntax error is detected during parsing phase using configured language.
      * @throws DeadlockException If execution of statement/query was impossible due to deadlock.
@@ -76,8 +78,6 @@ interface ExecutorInterface
      * @throws InvalidArgumentException If middleware configuration is invalid.
      * @throws LogicException If there is a problem with execution logic and requires either reconfiguration or refactoring.
      * @throws UnsupportedException If used adapter do not supports transactions.
-     *
-     * @return T
      */
     public function transactional(callable $transactional, TransactionInterface ...$transaction): mixed;
 }

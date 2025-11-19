@@ -254,7 +254,7 @@ final class AdapterTest extends TestCase
 
         $this->assertSame(TransactionIsolationLevel::SERIALIZABLE, $this->connection->getTransactionIsolation());
     }
-    
+
     #[Test]
     public function begin_transaction_throws_connection_exception(): void
     {
@@ -267,23 +267,23 @@ final class AdapterTest extends TestCase
             'password' => 'foo',
             'host'     => 'mysql.local',
         ]));
-        
+
         $adapter->begin(null);
     }
-    
+
     #[Test]
     public function begin_transaction_throws_transaction_exception(): void
     {
         $this->expectException(BeginTransactionException::class);
-        
+
         $connection = $this->createMock(Connection::class);
         $adapter    = new Adapter('foo', $connection);
-        
+
         $connection
             ->expects($this->once())
             ->method('beginTransaction')
             ->willThrowException(new \Exception());
-        
+
         $adapter->begin(null);
     }
 
@@ -298,7 +298,7 @@ final class AdapterTest extends TestCase
         $connection
             ->expects($this->once())
             ->method('beginTransaction');
-        
+
         $connection
             ->expects($this->once())
             ->method('commit')

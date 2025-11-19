@@ -19,7 +19,7 @@ final class AdapterRegistryTest extends TestCase
     {
         $first = $this->createMock(AdapterInterface::class);
         $second = $this->createMock(AdapterInterface::class);
-        
+
         $first
             ->method(PropertyHook::get('name'))
             ->willReturn('first');
@@ -27,12 +27,12 @@ final class AdapterRegistryTest extends TestCase
         $second
             ->method(PropertyHook::get('name'))
             ->willReturn('second');
-        
+
         $registry = new AdapterRegistry([
             $first,
             $second,
         ]);
-        
+
         $this->assertSame($first, $registry->get());
     }
 
@@ -57,12 +57,12 @@ final class AdapterRegistryTest extends TestCase
 
         $this->assertSame($second, $registry->get('second'));
     }
-    
+
     #[Test]
     public function registering_adapter_with_same_connection_name_throws_exception(): void
     {
         $this->expectException(LogicException::class);
-        
+
         $adapter = $this->createMock(AdapterInterface::class);
 
         new AdapterRegistry([

@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace RunOpenCode\Component\Query\Contract\Parser;
 
 /**
- * Query parsers.
+ * Query/statement parsers.
  *
- * Parsers are responsible for parsing queries before they are executed.
+ * Parsers are responsible for parsing queries/statements before they are executed.
  *
- * Parsing can be omitted, if raw query is to be executed as is. However,
+ * Parsing can be omitted, if raw query/statement is to be executed as is. However,
  * parsing language may be used to provide additional features, like variable
- * substitution, conditional query parts, loops, includes and so on.
+ * substitution, conditional query/statement parts, loops, includes and so on.
  */
 interface ParserInterface
 {
@@ -30,19 +30,19 @@ interface ParserInterface
     /**
      * Determines if parser supports given query.
      *
-     * @param non-empty-string $query Query or reference to a query to check.
+     * @param non-empty-string $source Query, statement or reference to a query or statement to check.
      *
-     * @return bool TRUE if parser supports given query, FALSE otherwise.
+     * @return bool TRUE if parser supports given query/statement, FALSE otherwise.
      */
-    public function supports(string $query): bool;
+    public function supports(string $source): bool;
 
     /**
-     * Parse given query with provided variables.
+     * Parse given query/statement with provided variables.
      *
-     * @param non-empty-string   $query     Query or reference to a query to parse.
+     * @param non-empty-string   $source    Query, statement or reference to a query or statement to parse.
      * @param VariablesInterface $variables Variables to use during parsing.
      *
      * @return non-empty-string Parsed query.
      */
-    public function parse(string $query, VariablesInterface $variables): string;
+    public function parse(string $source, VariablesInterface $variables): string;
 }

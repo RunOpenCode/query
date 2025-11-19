@@ -19,7 +19,7 @@ final class TransactionScopeTest extends TestCase
         $first = $this->createMock(AdapterInterface::class);
         $second = $this->createMock(AdapterInterface::class);
         $third = $this->createMock(AdapterInterface::class);
-        
+
         $first
             ->method(PropertyHook::get('name'))
             ->willReturn('first');
@@ -27,19 +27,19 @@ final class TransactionScopeTest extends TestCase
         $second
             ->method(PropertyHook::get('name'))
             ->willReturn('second');
-        
+
         $third
             ->method(PropertyHook::get('name'))
             ->willReturn('third');
-        
+
         $scope = new TransactionScope(
-            [$third], 
+            [$third],
             new TransactionScope(
                 [$second],
                 new TransactionScope([$first])
             )
         );
-        
+
         $this->assertFalse($scope->accepts('first', ExecutionScope::Strict));
         $this->assertTrue($scope->accepts('first', ExecutionScope::Parent));
         $this->assertTrue($scope->accepts('first', ExecutionScope::None));

@@ -14,8 +14,6 @@ use RunOpenCode\Component\Query\Executor\ExecutorMiddleware;
  *
  * @phpstan-import-type NextMiddlewareQueryCallable from MiddlewareInterface
  * @phpstan-import-type NextMiddlewareStatementCallable from MiddlewareInterface
- *
- * @internal
  */
 final readonly class MiddlewareRegistry
 {

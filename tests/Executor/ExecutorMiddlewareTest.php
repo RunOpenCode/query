@@ -42,7 +42,7 @@ final class ExecutorMiddlewareTest extends TestCase
             ->willReturn($this->createMock(ResultInterface::class));
 
         // @phpstan-ignore-next-line
-        $this->middleware->query('foo', new Context(), static fn(): null => null);
+        $this->middleware->query('foo', new Context(source: 'foo'), static fn(): null => null);
     }
 
     #[Test]
@@ -55,17 +55,17 @@ final class ExecutorMiddlewareTest extends TestCase
             ->willReturn(1);
 
         // @phpstan-ignore-next-line
-        $this->middleware->statement('foo', new Context(), static fn(): null => null);
+        $this->middleware->statement('foo', new Context(source: 'foo'), static fn(): null => null);
     }
 
     #[Test]
     public function transaction_scope_violation_throws_exception(): void
     {
         $this->expectException(LogicException::class);
-        
-        $first = $this->createMock(AdapterInterface::class);
+
+        $first  = $this->createMock(AdapterInterface::class);
         $second = $this->createMock(AdapterInterface::class);
-        
+
         $first
             ->method(PropertyHook::get('name'))
             ->willReturn('first');
@@ -80,11 +80,11 @@ final class ExecutorMiddlewareTest extends TestCase
         ]));
 
         $transaction = new TransactionScope(
-            [$second], 
+            [$second],
             new TransactionScope([$first])
         );
-        
+
         // @phpstan-ignore-next-line
-        $middleware->statement('foo', new Context(transaction: $transaction), static fn(): null => null);
+        $middleware->statement('foo', new Context(source: 'foo', transaction: $transaction), static fn(): null => null);
     }
 }

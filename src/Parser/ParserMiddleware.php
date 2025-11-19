@@ -18,8 +18,6 @@ use RunOpenCode\Component\Query\Contract\Parser\VariablesInterface;
  *
  * @phpstan-import-type NextMiddlewareQueryCallable from MiddlewareInterface
  * @phpstan-import-type NextMiddlewareStatementCallable from MiddlewareInterface
- *
- * @internal
  */
 final readonly class ParserMiddleware implements MiddlewareInterface
 {
@@ -40,21 +38,21 @@ final readonly class ParserMiddleware implements MiddlewareInterface
     /**
      * {@inheritdoc}
      */
-    public function statement(string $query, ContextInterface $context, callable $next): int
+    public function statement(string $statement, ContextInterface $context, callable $next): int
     {
-        return $this->parse($query, $context, $next);
+        return $this->parse($statement, $context, $next);
     }
 
     /**
      * Parse query using parser from registry.
      *
-     * @param non-empty-string                                            $query   Query to parse.
+     * @param non-empty-string                                            $source  Query/statement to parse.
      * @param ContextInterface                                            $context Current middleware context.
      * @param NextMiddlewareQueryCallable|NextMiddlewareStatementCallable $next    Next middleware to call.
      *
      * @return ($next is NextMiddlewareQueryCallable ? ResultInterface : int) Result of execution.
      */
-    private function parse(string $query, ContextInterface $context, callable $next): ResultInterface|int
+    private function parse(string $source, ContextInterface $context, callable $next): ResultInterface|int
     {
         /**
          * NOTE: We use peak here because parameters are consumed by parser,
@@ -62,7 +60,7 @@ final readonly class ParserMiddleware implements MiddlewareInterface
          */
         $parameters = $context->peak(ParametersInterface::class);
         $variables  = $context->require(VariablesInterface::class);
-        $parsed     = $this->registry->parse($query, new ContextAwareVariables(
+        $parsed     = $this->registry->parse($source, new ContextAwareVariables(
             $context,
             $variables,
             $parameters

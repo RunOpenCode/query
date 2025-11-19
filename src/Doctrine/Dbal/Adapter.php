@@ -32,8 +32,6 @@ use RunOpenCode\Component\Query\Exception\SyntaxException;
  * DbalAdapter uses Doctrine Dbal to execute SQL queries and statements.
  *
  * @implements AdapterInterface<Transaction, Options, Result>
- *
- * @internal
  */
 final readonly class Adapter implements AdapterInterface
 {

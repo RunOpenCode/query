@@ -33,7 +33,6 @@ final readonly class TransactionScope
         array                     $adapters,
         private ?TransactionScope $parent = null,
     ) {
-        // @phpstan-ignore-next-line
         $this->adapters = \array_combine(\array_map(
             static fn(AdapterInterface $adapter): string => $adapter->name,
             $adapters,

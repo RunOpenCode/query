@@ -182,12 +182,12 @@ final class ExecutorTest extends TestCase
 
         $this->assertNull($result->getRecord(null));
     }
-    
+
     #[Test]
     public function fetch_from_replica_within_transaction_throws_exception(): void
     {
         $this->expectException(LogicException::class);
-        
+
         $this->executor->transactional(function(ExecutorInterface $executor): ResultInterface {
             return $executor->query(
                 'default_dataset/filter.sql.twig',

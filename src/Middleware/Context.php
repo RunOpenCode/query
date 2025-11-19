@@ -25,10 +25,12 @@ final readonly class Context implements ContextInterface
     /**
      * Create execution context.
      *
+     * @param non-empty-string  $source         Query or statement being executed.
      * @param object[]          $configurations Configurations for middlewares.
      * @param ?TransactionScope $transaction    Current transactional scope, if any.
      */
     public function __construct(
+        public string            $source,
         public array             $configurations = [],
         public ?TransactionScope $transaction = null,
     ) {

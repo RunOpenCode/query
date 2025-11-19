@@ -15,8 +15,6 @@ use RunOpenCode\Component\Query\Exception\LogicException;
 /**
  * Last middleware in execution chain that actually executes query using appropriate
  * executor from registry.
- *
- * @internal
  */
 final readonly class ExecutorMiddleware implements MiddlewareInterface
 {
@@ -36,9 +34,9 @@ final readonly class ExecutorMiddleware implements MiddlewareInterface
     /**
      * {@inheritdoc}
      */
-    public function statement(string $query, ContextInterface $context, callable $next): int
+    public function statement(string $statement, ContextInterface $context, callable $next): int
     {
-        return $this->execute($query, $context, 'statement');
+        return $this->execute($statement, $context, 'statement');
     }
 
     /**
@@ -55,7 +53,7 @@ final readonly class ExecutorMiddleware implements MiddlewareInterface
         $adapter    = $this->registry->get($options?->connection);
         $scope      = $options->scope ?? ExecutionScope::Strict;
         $accepts    = null !== $context->transaction ? $context->transaction->accepts(...) : static fn(): true => true;
-        
+
         if (!$accepts($adapter, $scope)) {
             throw new LogicException(\sprintf(
                 'Execution of %s using connection "%s" within current transaction violates current execution scope configuration "%s".',

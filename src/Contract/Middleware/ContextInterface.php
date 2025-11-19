@@ -20,6 +20,15 @@ use RunOpenCode\Component\Query\Executor\TransactionScope;
 interface ContextInterface
 {
     /**
+     * Query or statement being executed.
+     *
+     * @var non-empty-string
+     */
+    public string $source {
+        get;
+    }
+
+    /**
      * Configuration objects for execution.
      *
      * @var object[]

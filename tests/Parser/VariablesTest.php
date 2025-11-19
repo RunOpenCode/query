@@ -141,17 +141,17 @@ final class VariablesTest extends TestCase
 
         $this->assertTrue(isset($bag['foo']));
         $this->assertSame('bar', $bag['foo']);
-        
+
         $bag['baz'] = 'qux';
 
         $this->assertTrue(isset($bag['baz']));
         $this->assertSame('qux', $bag['baz']);
-        
+
         unset($bag['baz']);
 
         $this->assertFalse(isset($bag['baz']));
     }
-    
+
     #[Test]
     public function iterates_and_counts(): void
     {
@@ -159,7 +159,7 @@ final class VariablesTest extends TestCase
             'foo' => 'bar',
             'baz' => 'qux',
         ]);
-        
+
         $this->assertSame([
             'foo' => 'bar',
             'baz' => 'qux',

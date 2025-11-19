@@ -15,20 +15,20 @@ final class ContextTest extends TestCase
     public function peak(): void
     {
         $configuration = new \stdClass();
-        $context       = new Context([$configuration]);
+        $context       = new Context(source: 'foo', configurations: [$configuration]);
 
         $context->peak(\stdClass::class);
-        
+
         $this->assertFalse($context->depleted());
         $this->assertSame([
-            $configuration
+            $configuration,
         ], \iterator_to_array($context->unused()));
     }
 
     #[Test]
     public function require(): void
     {
-        $context = new Context([new \stdClass()]);
+        $context = new Context(source: 'foo', configurations: [new \stdClass()]);
 
         $context->require(\stdClass::class);
 
@@ -40,7 +40,7 @@ final class ContextTest extends TestCase
     {
         $this->expectException(LogicException::class);
 
-        $context = new Context([new \stdClass()]);
+        $context = new Context(source: 'foo', configurations: [new \stdClass()]);
 
         $context->require(\stdClass::class);
         $context->require(\stdClass::class);

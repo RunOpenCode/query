@@ -42,9 +42,12 @@ final class CacheMiddlewareTest extends TestCase
     {
         $expected = $this->createMock(CacheableResultInterface::class);
         $item     = $this->createMock(ItemInterface::class);
-        $context  = new Context(configurations: [
-            CacheIdentity::static('key'),
-        ]);
+        $context  = new Context(
+            source: 'foo',
+            configurations: [
+                CacheIdentity::static('key'),
+            ]
+        );
 
         $this
             ->cache
@@ -79,9 +82,12 @@ final class CacheMiddlewareTest extends TestCase
     {
         $expected = $this->createMock(ResultInterface::class);
         $item     = $this->createMock(ItemInterface::class);
-        $context  = new Context(configurations: [
-            CacheIdentity::static('key'),
-        ]);
+        $context  = new Context(
+            source: 'foo',
+            configurations: [
+                CacheIdentity::static('key'),
+            ]
+        );
 
         $this
             ->cache
@@ -111,9 +117,12 @@ final class CacheMiddlewareTest extends TestCase
         $this->expectException(LogicException::class);
 
         $item    = $this->createMock(ItemInterface::class);
-        $context = new Context(configurations: [
-            CacheIdentity::static('key'),
-        ]);
+        $context = new Context(
+            source: 'foo',
+            configurations: [
+                CacheIdentity::static('key'),
+            ]
+        );
 
         $this
             ->cache
@@ -136,9 +145,12 @@ final class CacheMiddlewareTest extends TestCase
     {
         $expected = $this->createMock(CacheableResultInterface::class);
         $item     = $this->createMock(ItemInterface::class);
-        $context  = new Context(configurations: [
-            new CacheIdentity('key', static fn(): false => false),
-        ]);
+        $context  = new Context(
+            source: 'foo',
+            configurations: [
+                new CacheIdentity('key', static fn(): false => false),
+            ]
+        );
 
         $this
             ->cache
@@ -177,7 +189,7 @@ final class CacheMiddlewareTest extends TestCase
             ->expects($this->never())
             ->method($this->anything());
 
-        $context = new Context();
+        $context = new Context(source: 'foo');
         $next    = static fn(): ResultInterface|int => $expected;
         $result  = $this->middleware->{$method}('foo', $context, $next);
 
@@ -202,9 +214,12 @@ final class CacheMiddlewareTest extends TestCase
     {
         $this->expectException(LogicException::class);
 
-        $context = new Context(configurations: [
-            $this->createMock($class),
-        ]);
+        $context = new Context(
+            source: 'foo',
+            configurations: [
+                $this->createMock($class),
+            ]
+        );
 
         $this
             ->cache

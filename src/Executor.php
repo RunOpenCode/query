@@ -15,8 +15,6 @@ use RunOpenCode\Component\Query\Middleware\MiddlewareRegistry;
 
 /**
  * Default implementation of {@see ExecutorInterface}.
- *
- * @internal
  */
 final class Executor implements ExecutorInterface
 {
@@ -42,6 +40,7 @@ final class Executor implements ExecutorInterface
         }
 
         return $this->middlewares->query($query, new Context(
+            source: $query,
             configurations: $configuration
         ));
     }
@@ -49,13 +48,14 @@ final class Executor implements ExecutorInterface
     /**
      * {@inheritdoc}
      */
-    public function statement(string $query, object ...$configuration): int
+    public function statement(string $statement, object ...$configuration): int
     {
         if (!$this->current) {
             throw new LogicException('You are invoking method of executor which is not in current transactional scope.');
         }
 
-        return $this->middlewares->statement($query, new Context(
+        return $this->middlewares->statement($statement, new Context(
+            source: $statement,
             configurations: $configuration
         ));
     }

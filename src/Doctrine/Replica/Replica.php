@@ -13,11 +13,11 @@ final readonly class Replica
      * Create replica configuration.
      *
      * @param non-empty-string|null $connection Connection for which replica should be used for query (NULL denotes default connection).
-     * @param FallbackStrategy      $fallback   Fallback configuration.
+     * @param FallbackStrategy|null $fallback   Fallback configuration, or null, if default strategy should be used.
      */
     public function __construct(
-        public ?string          $connection = null,
-        public FallbackStrategy $fallback = FallbackStrategy::Primary,
+        public ?string           $connection = null,
+        public ?FallbackStrategy $fallback = null,
     ) {
         // noop.
     }

@@ -36,8 +36,6 @@ use Symfony\Component\Cache\Adapter\TagAwareAdapter;
  *
  * Note that cache key and cache tags are not sanitized, underlying adapter may throw exception if you use
  * reserved character in keys/tags.
- *
- * @internal
  */
 final readonly class CacheMiddleware implements MiddlewareInterface
 {
@@ -98,12 +96,12 @@ final readonly class CacheMiddleware implements MiddlewareInterface
      *
      * @throws LogicException Caching of statements is not supported by design.
      */
-    public function statement(string $query, ContextInterface $context, callable $next): int
+    public function statement(string $statement, ContextInterface $context, callable $next): int
     {
         $identity = $context->require(CacheIdentityInterface::class) ?? $context->require(CacheIdentifiableInterface::class);
 
         if (null === $identity) {
-            return $next($query, $context);
+            return $next($statement, $context);
         }
 
         throw new LogicException('Caching must not be requested for statement execution.');

@@ -39,7 +39,6 @@ final readonly class Isolator
     public function __construct(
         private string     $name,
         private Connection $connection,
-
     ) {
         $this->isolations = new \SplStack();
     }
@@ -100,7 +99,7 @@ final readonly class Isolator
             throw new ConnectionException(\sprintf(
                 'Connection error occurred while trying to get current transaction isolation level for connection "%s".',
                 $this->name,
-            ), $exception,);
+            ), $exception, );
         } catch (\Exception $exception) {
             throw new IsolationException(\sprintf(
                 'Unable to get transaction isolation level for connection "%s".',

@@ -10,7 +10,7 @@ use RunOpenCode\Component\Query\Contract\Parser\VariablesInterface;
 /**
  * Void parser does not perform any parsing at all.
  *
- * It assumes that provided query is ready to be executed as is.
+ * It assumes that provided query/statement is ready to be executed as is.
  */
 final class VoidParser implements ParserInterface
 {
@@ -26,7 +26,7 @@ final class VoidParser implements ParserInterface
     /**
      * {@inheritdoc}
      */
-    public function supports(string $query): bool
+    public function supports(string $source): bool
     {
         return true;
     }
@@ -34,8 +34,8 @@ final class VoidParser implements ParserInterface
     /**
      * {@inheritdoc}
      */
-    public function parse(string $query, VariablesInterface $variables): string
+    public function parse(string $source, VariablesInterface $variables): string
     {
-        return $query;
+        return $source;
     }
 }

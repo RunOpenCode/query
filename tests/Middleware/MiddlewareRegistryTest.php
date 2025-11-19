@@ -39,14 +39,14 @@ final class MiddlewareRegistryTest extends TestCase
             ->willReturnCallback(function(string $query, ContextInterface $context, callable $next): ResultInterface {
                 return $next(\sprintf('second(%s)', $query), $context); // @phpstan-ignore-line
             });
-        
+
         $adapter
             ->expects($this->once())
             ->method('query')
             ->with('second(first(foo))')
             ->willReturn($this->createMock(ResultInterface::class));
 
-        new MiddlewareRegistry([$first, $second, $last])->query('foo', new Context());
+        new MiddlewareRegistry([$first, $second, $last])->query('foo', new Context(source: 'foo'));
     }
 
     #[Test]
@@ -77,27 +77,28 @@ final class MiddlewareRegistryTest extends TestCase
             ->with('second(first(foo))')
             ->willReturn(0);
 
-        new MiddlewareRegistry([$first, $second, $last])->statement('foo', new Context());
+        new MiddlewareRegistry([$first, $second, $last])->statement('foo', new Context(source: 'foo'));
     }
-    
+
     #[Test]
     public function wrong_last_middleware_configuration_throws_exception(): void
     {
         $this->expectException(LogicException::class);
-        
+
         new MiddlewareRegistry([$this->createMock(MiddlewareInterface::class)]);
     }
-    
+
     #[Test]
     public function unexhausted_context_throws_exception(): void
     {
         $this->expectException(LogicException::class);
-        
+
         $adapter = $this->createMock(AdapterInterface::class);
 
         new MiddlewareRegistry([
             new ExecutorMiddleware(new AdapterRegistry([$adapter]))
         ])->statement('foo', new Context(
+            source: 'foo',
             configurations: [new \stdClass()]
         ));
     }

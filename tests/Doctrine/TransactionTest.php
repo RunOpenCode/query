@@ -20,7 +20,7 @@ final class TransactionTest extends TestCase
     public function construct_with_isolation(string $method, TransactionIsolationLevel $expected): void
     {
         $configuration = Transaction::{$method}('foo');
-        
+
         $this->assertInstanceOf(Transaction::class, $configuration);
         $this->assertSame($expected, $configuration->isolation);
     }

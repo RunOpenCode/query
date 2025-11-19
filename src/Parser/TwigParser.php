@@ -46,9 +46,9 @@ final class TwigParser implements ParserInterface
     /**
      * {@inheritdoc}
      */
-    public function supports(string $query): bool
+    public function supports(string $source): bool
     {
-        [$template,] = $this->template($query);
+        [$template,] = $this->template($source);
 
         return $this->twig->getLoader()->exists($template);
     }
@@ -56,33 +56,33 @@ final class TwigParser implements ParserInterface
     /**
      * {@inheritdoc}
      */
-    public function parse(string $query, VariablesInterface $variables): string
+    public function parse(string $source, VariablesInterface $variables): string
     {
-        [$template, $block] = $this->template($query);
+        [$template, $block] = $this->template($source);
         $context = \iterator_to_array($variables);
 
         try {
             $wrapper = $this->twig->load($template);
         } catch (LoaderError $exception) {
             throw new NotExistsException(\sprintf(
-                'Could not find query source "%s" in any of known Twig templates.',
+                'Could not find source "%s" in any of known Twig templates.',
                 $template,
             ), $exception);
         } catch (SyntaxError $exception) {
             throw new SyntaxException(\sprintf(
-                'Query source "%s" contains Twig syntax error and could not be compiled.',
+                'Source "%s" contains Twig syntax error and could not be compiled.',
                 $template,
             ), $exception);
         } catch (\Exception $exception) {
             throw new RuntimeException(\sprintf(
-                'Unknown exception occurred during loading of query source "%s" from Twig template.',
+                'Unknown exception occurred during loading of source "%s" from Twig template.',
                 $template,
             ), $exception);
         }
 
         if (null !== $block && !$wrapper->hasBlock($block, $context)) {
             throw new NotExistsException(\sprintf(
-                'Block "%s" in query source "%s" provided in Twig template does not exists.',
+                'Block "%s" in source "%s" provided in Twig template does not exists.',
                 $block,
                 $template,
             ));
@@ -92,32 +92,32 @@ final class TwigParser implements ParserInterface
             $parsed = null !== $block ? $wrapper->renderBlock($block, $context) : $wrapper->render($context);
         } catch (\Exception $exception) {
             throw new RuntimeException(\sprintf(
-                'Unknown exception occurred during rendering of query source "%s" contained in Twig template.',
-                $query,
+                'Unknown exception occurred during rendering of source "%s" contained in Twig template.',
+                $source,
             ), $exception);
         }
 
         return \trim($parsed) ?: throw new RuntimeException(\sprintf(
-            'Parsed query from Twit template "%s" yielded empty string.',
-            $query
+            'Parsed source from Twit template "%s" yielded empty string.',
+            $source
         ));
     }
 
     /**
      * Splits given query into template name and optional block name.
      *
-     * @param string $query
+     * @param string $source
      *
      * @return array{string, ?string}
      */
-    private function template(string $query): array
+    private function template(string $source): array
     {
-        if (\str_contains($query, '::')) {
-            $parts = \explode('::', $query, 2);
+        if (\str_contains($source, '::')) {
+            $parts = \explode('::', $source, 2);
 
-            return 2 === \count($parts) ? $parts : [$query, null];
+            return 2 === \count($parts) ? $parts : [$source, null];
         }
 
-        return [$query, null];
+        return [$source, null];
     }
 }

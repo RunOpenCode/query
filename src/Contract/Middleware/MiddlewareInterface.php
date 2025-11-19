@@ -31,11 +31,11 @@ interface MiddlewareInterface
     /**
      * Invoke middleware for statement.
      *
-     * @param non-empty-string                $query   Query to execute.
-     * @param ContextInterface                $context Middleware execution context.
-     * @param NextMiddlewareStatementCallable $next    Next middleware to call, if applicable.
+     * @param non-empty-string                $statement Statement to execute.
+     * @param ContextInterface                $context   Middleware execution context.
+     * @param NextMiddlewareStatementCallable $next      Next middleware to call, if applicable.
      *
      * @return int Number of affected records.
      */
-    public function statement(string $query, ContextInterface $context, callable $next): int;
+    public function statement(string $statement, ContextInterface $context, callable $next): int;
 }

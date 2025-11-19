@@ -10,8 +10,6 @@ use RunOpenCode\Component\Query\Exception\NotExistsException;
 
 /**
  * Registry of available parsers.
- *
- * @internal
  */
 final readonly class ParserRegistry
 {
