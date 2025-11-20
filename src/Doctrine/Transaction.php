@@ -32,7 +32,7 @@ final readonly class Transaction implements TransactionInterface
 
     /**
      * Creates new Doctrine transaction instance for connection.
-     * 
+     *
      * @param non-empty-string $connection Connection name.
      *
      * @return self
@@ -41,7 +41,7 @@ final readonly class Transaction implements TransactionInterface
     {
         return new self($connection);
     }
-    
+
     /**
      * Create transaction configuration with READ UNCOMMITED isolation level.
      *

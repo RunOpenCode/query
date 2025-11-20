@@ -41,13 +41,13 @@ final class ExecutorMiddlewareTest extends TestCase
             ->method('defaults')
             ->with(OptionsInterface::class)
             ->willReturn($this->createMock(OptionsInterface::class));
-        
+
         $this->adapter
             ->expects($this->once())
             ->method('query')
             ->with('foo', $this->isInstanceOf(OptionsInterface::class), null)
             ->willReturn($this->createMock(ResultInterface::class));
-        
+
         // @phpstan-ignore-next-line
         $this->middleware->query('foo', new Context(source: 'foo'), static fn(): null => null);
     }

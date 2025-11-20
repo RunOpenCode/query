@@ -31,7 +31,7 @@ interface OptionsInterface
 
     /**
      * Create new instance of this configuration using different connection.
-     * 
+     *
      * @param non-empty-string $connection Connection to use.
      *
      * @return self New instance with modified connection.

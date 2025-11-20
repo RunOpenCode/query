@@ -78,7 +78,7 @@ final readonly class ReplicaMiddleware implements MiddlewareInterface
                 // @phpstan-ignore-next-line
                 $primary->defaults(OptionsInterface::class)->withConnection($current)
             );
-            
+
             try {
                 return $next($query, $fork);
             } catch (ConnectionException|DeadlockException|IsolationException $e) {

@@ -100,7 +100,7 @@ interface ContextInterface
 
     /**
      * Create new context with additional configuration.
-     * 
+     *
      * @param object $configuration Configuration to append.
      *
      * @return self New instance of execution context.

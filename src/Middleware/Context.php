@@ -129,7 +129,7 @@ final readonly class Context implements ContextInterface
         foreach ($this->used as $key => $value) {
             $context->require($key);
         }
-        
+
         return $context;
     }
 

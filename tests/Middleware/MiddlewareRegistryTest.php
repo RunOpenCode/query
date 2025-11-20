@@ -40,7 +40,7 @@ final class MiddlewareRegistryTest extends TestCase
             ->willReturnCallback(function(string $query, ContextInterface $context, callable $next): ResultInterface {
                 return $next(\sprintf('second(%s)', $query), $context); // @phpstan-ignore-line
             });
-        
+
         $adapter
             ->expects($this->once())
             ->method('defaults')
@@ -83,7 +83,7 @@ final class MiddlewareRegistryTest extends TestCase
             ->method('defaults')
             ->with(OptionsInterface::class)
             ->willReturn($this->createMock(OptionsInterface::class));
-        
+
         $adapter
             ->expects($this->once())
             ->method('statement')

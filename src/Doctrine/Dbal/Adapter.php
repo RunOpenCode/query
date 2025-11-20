@@ -201,7 +201,7 @@ final readonly class Adapter implements AdapterInterface
     private function execute(string $query, Options $options, callable $invocation): ResultInterface|int
     {
         $isolate = null !== $options->isolation && $options->isolation !== $this->isolator->get();
-        
+
         $this->isolator->isolate($options->isolation);
 
         try {
