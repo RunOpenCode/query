@@ -63,10 +63,23 @@ final readonly class Adapter implements AdapterInterface
     /**
      * {@inheritdoc}
      */
-    public function begin(?TransactionInterface $transaction): void
+    public function defaults(string $class): object
     {
-        $transaction = $transaction ?? new Transaction($this->name);
+        return match (true) {
+            \is_a($class, OptionsInterface::class, true) => Options::connection($this->name),
+            \is_a($class, TransactionInterface::class, true) => Transaction::connection($this->name),
+            default => throw new LogicException(\sprintf(
+                'Class %s is not supported.',
+                $class
+            )),
+        };
+    }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function begin(TransactionInterface $transaction): void
+    {
         \assert($transaction->connection === $this->name, new LogicException(\sprintf(
             'Transaction for connection "%s" requested, "%s" used.',
             $transaction->connection,
@@ -141,7 +154,7 @@ final readonly class Adapter implements AdapterInterface
     /**
      * {@inheritdoc}
      */
-    public function query(string $query, ?ParametersInterface $parameters = null, ?OptionsInterface $options = null): ResultInterface
+    public function query(string $query, OptionsInterface $options, ?ParametersInterface $parameters = null): ResultInterface
     {
         // Prepare query invocation closure.
         $invocation = static function(Connection $connection) use ($query, $parameters): ResultInterface {
@@ -152,13 +165,13 @@ final readonly class Adapter implements AdapterInterface
             ));
         };
 
-        return $this->execute($query, $invocation, $options);
+        return $this->execute($query, $options, $invocation);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function statement(string $query, ?ParametersInterface $parameters = null, ?OptionsInterface $options = null): int
+    public function statement(string $query, OptionsInterface $options, ?ParametersInterface $parameters = null): int
     {
         // Prepare statement invocation closure.
         $invocation = static function(Connection $connection) use ($query, $parameters): int {
@@ -169,7 +182,7 @@ final readonly class Adapter implements AdapterInterface
             );
         };
 
-        return $this->execute($query, $invocation, $options);
+        return $this->execute($query, $options, $invocation);
     }
 
     /**
@@ -180,16 +193,16 @@ final readonly class Adapter implements AdapterInterface
      * @template T of ResultInterface|int
      *
      * @param string                  $query      SQL query being executed.
+     * @param Options                 $options    Execution options.
      * @param callable(Connection): T $invocation Query invocation closure.
-     * @param Options|null            $options    Optional execution options.
      *
      * @return T
      */
-    private function execute(string $query, callable $invocation, ?Options $options): ResultInterface|int
+    private function execute(string $query, Options $options, callable $invocation): ResultInterface|int
     {
-        $isolate = null !== $options?->isolation && $options->isolation !== $this->isolator->get();
-
-        $this->isolator->isolate($options?->isolation);
+        $isolate = null !== $options->isolation && $options->isolation !== $this->isolator->get();
+        
+        $this->isolator->isolate($options->isolation);
 
         try {
             // @phpstan-ignore-next-line

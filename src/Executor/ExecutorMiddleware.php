@@ -48,9 +48,10 @@ final readonly class ExecutorMiddleware implements MiddlewareInterface
      */
     private function execute(string $query, ContextInterface $context, string $method): ResultInterface|int
     {
-        $options    = $context->require(OptionsInterface::class);
+        $adapter = $this->registry->get($context->peak(OptionsInterface::class)?->connection);
+        /** @var OptionsInterface $options */
+        $options    = $context->require(OptionsInterface::class) ?? $adapter->defaults(OptionsInterface::class);
         $parameters = $context->require(ParametersInterface::class);
-        $adapter    = $this->registry->get($options?->connection);
         $scope      = $options->scope ?? ExecutionScope::Strict;
         $accepts    = null !== $context->transaction ? $context->transaction->accepts(...) : static fn(): true => true;
 
@@ -63,6 +64,6 @@ final readonly class ExecutorMiddleware implements MiddlewareInterface
             ));
         }
 
-        return $adapter->{$method}($query, $parameters, $options);
+        return $adapter->{$method}($query, $options, $parameters);
     }
 }

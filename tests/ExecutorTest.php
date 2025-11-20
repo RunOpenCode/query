@@ -12,8 +12,6 @@ use RunOpenCode\Component\Query\Contract\ExecutorInterface;
 use RunOpenCode\Component\Query\Doctrine\Dbal\Adapter;
 use RunOpenCode\Component\Query\Doctrine\Parameters\Named;
 use RunOpenCode\Component\Query\Doctrine\Parameters\Positional;
-use RunOpenCode\Component\Query\Doctrine\Replica\Replica;
-use RunOpenCode\Component\Query\Doctrine\Replica\ReplicaMiddleware;
 use RunOpenCode\Component\Query\Exception\LogicException;
 use RunOpenCode\Component\Query\Executor;
 use RunOpenCode\Component\Query\Middleware\MiddlewareRegistry;
@@ -21,6 +19,8 @@ use RunOpenCode\Component\Query\Parser\ParserMiddleware;
 use RunOpenCode\Component\Query\Parser\ParserRegistry;
 use RunOpenCode\Component\Query\Parser\TwigParser;
 use RunOpenCode\Component\Query\Parser\VoidParser;
+use RunOpenCode\Component\Query\Replica\Replica;
+use RunOpenCode\Component\Query\Replica\ReplicaMiddleware;
 use RunOpenCode\Component\Query\Tests\Fixtures\Dbal\MySqlDatabase;
 use RunOpenCode\Component\Query\Tests\Fixtures\TwigFactory;
 use RunOpenCode\Component\Query\Tests\PHPUnit\DbalTools;
@@ -47,7 +47,7 @@ final class ExecutorTest extends TestCase
                 new VoidParser(),
             ])),
             new ReplicaMiddleware(
-                null,
+                'foo',
                 ['baz'],
                 $adapters
             ),

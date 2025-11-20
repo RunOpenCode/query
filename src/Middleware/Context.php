@@ -52,19 +52,6 @@ final readonly class Context implements ContextInterface
     /**
      * {@inheritdoc}
      */
-    public function filter(callable $predicate, ?string $type = null): array
-    {
-        $configurations = \array_filter(
-            $this->configurations,
-            static fn(object $configuration): bool => !\is_string($type) || \is_a($configuration, $type)
-        );
-
-        return \array_values(\array_filter($configurations, $predicate));
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function require(object|string $type): ?object
     {
         $configuration = $this->peak($type);
@@ -83,6 +70,67 @@ final readonly class Context implements ContextInterface
         $this->used->offsetSet($configuration, true);
 
         return $configuration;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function replace(object|string $subject, object $replacement): self
+    {
+        $target = $this->peak($subject);
+
+        if (null === $target) {
+            throw new LogicException(\sprintf(
+                'Configuration of type "%s" is not present in current context.',
+                \is_string($subject) ? $subject : \get_debug_type($subject),
+            ));
+        }
+
+        $configurations = [
+            $replacement,
+            ...\array_filter(
+                $this->configurations,
+                static fn(object $configuration): bool => $configuration !== $target
+            ),
+        ];
+
+        $context = new self(
+            $this->source,
+            $configurations,
+            $this->transaction,
+        );
+
+        foreach ($this->used as $key => $value) {
+            $context->require($key);
+        }
+
+        // @phpstan-ignore-next-line
+        if ($this->used->offsetGet($target)) {
+            $context->require($replacement);
+        }
+
+        return $context;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function append(object $configuration): ContextInterface
+    {
+        $context = new self(
+            $this->source,
+            [
+                ...$this->configurations,
+                $configuration,
+            ],
+            $this->transaction,
+        );
+
+        foreach ($this->used as $key => $value) {
+            $context->require($key);
+        }
+        
+        return $context;
     }
 
     /**

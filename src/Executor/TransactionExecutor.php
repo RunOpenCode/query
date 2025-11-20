@@ -63,7 +63,7 @@ final class TransactionExecutor implements ExecutorInterface
         array                               $configurations
     ) {
         $this->callable       = $callable(...);
-        $this->configurations = $configurations;
+        $this->configurations = empty($configurations) ? [$this->adapters->get()->defaults(TransactionInterface::class)] : $configurations;
         $this->scope          = null;
         $this->closed         = false;
         $this->current        = false;
@@ -86,12 +86,12 @@ final class TransactionExecutor implements ExecutorInterface
             throw new LogicException('Execution of this transaction is closed.');
         }
 
-        $configurations = empty($this->configurations) ? [null] : $this->configurations;
-        $adapters       = [];
+        // TODO -> combine adapters and configurations
+        $adapters = [];
 
         try {
-            foreach ($configurations as $configuration) {
-                $adapter = $this->adapters->get($configuration?->connection);
+            foreach ($this->configurations as $configuration) {
+                $adapter = $this->adapters->get($configuration->connection);
 
                 $adapter->begin($configuration);
 

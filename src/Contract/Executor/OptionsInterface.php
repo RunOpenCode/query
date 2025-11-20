@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace RunOpenCode\Component\Query\Contract\Executor;
 
 /**
- * Value object which configures execution of query and/or statement of executor adapter.
+ * Value object which configures execution of query or statement of executor adapter.
  */
 interface OptionsInterface
 {
@@ -22,15 +22,6 @@ interface OptionsInterface
     }
 
     /**
-     * Tags associated with the query execution, or null if none.
-     *
-     * @var non-empty-string[]|null
-     */
-    public ?array $tags {
-        get;
-    }
-
-    /**
      * If provided, overrides {@see ExecutionScope::Strict} rule of execution of
      * queries/statements within transaction execution scope.
      */
@@ -39,11 +30,11 @@ interface OptionsInterface
     }
 
     /**
-     * Checks if query/statement execution is tagged with given tag.
+     * Create new instance of this configuration using different connection.
+     * 
+     * @param non-empty-string $connection Connection to use.
      *
-     * @param non-empty-string $tag Tag to search for.
-     *
-     * @return bool True if tag is present, false otherwise.
+     * @return self New instance with modified connection.
      */
-    public function has(string $tag): bool;
+    public function withConnection(string $connection): self;
 }

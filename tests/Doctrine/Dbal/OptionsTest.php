@@ -7,19 +7,11 @@ namespace RunOpenCode\Component\Query\Tests\Doctrine\Dbal;
 use Doctrine\DBAL\TransactionIsolationLevel;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RunOpenCode\Component\Query\Contract\Executor\ExecutionScope;
 use RunOpenCode\Component\Query\Doctrine\Dbal\Options;
 
 final class OptionsTest extends TestCase
 {
-    #[Test]
-    public function has_tag(): void
-    {
-        $options = new Options(tags: ['foo']);
-
-        $this->assertTrue($options->has('foo'));
-        $this->assertFalse($options->has('bar'));
-    }
-
     #[Test]
     public function creates_isolated(): void
     {
@@ -36,5 +28,21 @@ final class OptionsTest extends TestCase
             'foo',
             Options::connection('foo')->connection,
         );
+    }
+
+    #[Test]
+    public function with_connection(): void
+    {
+        $options  = new Options(
+            connection: 'foo',
+            isolation: TransactionIsolationLevel::REPEATABLE_READ,
+            scope: ExecutionScope::Parent,
+        );
+        $modified = $options->withConnection('bar');
+
+        $this->assertNotSame($modified, $options);
+        $this->assertSame('bar', $modified->connection);
+        $this->assertSame(TransactionIsolationLevel::REPEATABLE_READ, $modified->isolation);
+        $this->assertSame(ExecutionScope::Parent, $modified->scope);
     }
 }

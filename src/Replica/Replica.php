@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace RunOpenCode\Component\Query\Doctrine\Replica;
+namespace RunOpenCode\Component\Query\Replica;
 
 /**
  * Use database replica for executing query.

@@ -56,7 +56,7 @@ final readonly class ContextAwareVariables implements VariablesInterface
         ?ParametersInterface $parameters,
     ) {
         /** @var array<non-empty-string, mixed> $params */
-        $params          = $parameters?->values && !\array_is_list($parameters->values) ? $parameters->values : [];
+        $params          = null !== $parameters?->values && !\array_is_list($parameters->values) ? $parameters->values : [];
         $this->parser    = $variables?->parser;
         $this->variables = \array_merge(
             $params,

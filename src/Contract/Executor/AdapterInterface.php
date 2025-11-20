@@ -44,21 +44,31 @@ interface AdapterInterface
     }
 
     /**
+     * Create default configuration objects for the adapter.
+     *
+     * If middlewares depend on adapter configurations, and configurations
+     * adapter should provide default configuration which will be used during
+     * execution process.
+     *
+     * @param class-string<TransactionInterface|OptionsInterface> $class Type of requested default configuration.
+     *
+     * @return ($class is class-string<TransactionInterface> ? TTransaction : TOptions)
+     */
+    public function defaults(string $class): object;
+
+    /**
      * Begin transaction.
      *
      * Start transaction using adapter's connection, according to the given configuration.
      *
-     * If configuration is not provided, adapter should use default configuration defined
-     * by adapters itself.
-     *
-     * @param TTransaction|null $transaction Optional transaction configuration to use, or NULL if default configuration should be used.
+     * @param TTransaction $transaction Optional transaction configuration to use.
      *
      * @throws ConnectionException If connection to data source could not be established.
      * @throws TransactionException If transaction error occurred.
      * @throws DriverException If execution fails.
      * @throws RuntimeException If unknown error occurred.
      */
-    public function begin(?TransactionInterface $transaction): void;
+    public function begin(TransactionInterface $transaction): void;
 
     /**
      * Commit current transaction.
@@ -86,8 +96,8 @@ interface AdapterInterface
      * This query is expected to return collection of records.
      *
      * @param non-empty-string         $query      Query to execute.
+     * @param TOptions                 $options    Executor options.
      * @param ParametersInterface|null $parameters Optional parameters for query.
-     * @param TOptions|null            $options    Optional executor specific options.
      *
      * @return TResult Result of execution.
      *
@@ -96,7 +106,7 @@ interface AdapterInterface
      * @throws SyntaxException If provided query has syntax errors.
      * @throws RuntimeException If unknown error occurred.
      */
-    public function query(string $query, ?ParametersInterface $parameters = null, ?OptionsInterface $options = null): ResultInterface;
+    public function query(string $query, OptionsInterface $options, ?ParametersInterface $parameters = null): ResultInterface;
 
     /**
      * Execute statement query.
@@ -104,8 +114,8 @@ interface AdapterInterface
      * This query is expected to perform data manipulation and return number of affected records.
      *
      * @param non-empty-string         $query      Query to execute.
+     * @param TOptions                 $options    Executor options.
      * @param ParametersInterface|null $parameters Optional parameters for query.
-     * @param TOptions|null            $options    Optional executor specific options.
      *
      * @return int Number of affected records.
      *
@@ -114,5 +124,5 @@ interface AdapterInterface
      * @throws SyntaxException If provided query has syntax errors.
      * @throws RuntimeException If unknown error occurred.
      */
-    public function statement(string $query, ?ParametersInterface $parameters = null, ?OptionsInterface $options = null): int;
+    public function statement(string $query, OptionsInterface $options, ?ParametersInterface $parameters = null): int;
 }

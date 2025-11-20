@@ -19,13 +19,11 @@ final readonly class Options implements OptionsInterface
      * @param ?non-empty-string          $connection Optional connection name.
      * @param ?TransactionIsolationLevel $isolation  Optional transaction isolation level.
      * @param ?ExecutionScope            $scope      Optional transactional scope override, if query/statement is executed inside transactional scope.
-     * @param non-empty-string[]|null    $tags       Optional executor tags.
      */
     public function __construct(
         public ?string                    $connection = null,
         public ?TransactionIsolationLevel $isolation = null,
         public ?ExecutionScope            $scope = null,
-        public ?array                     $tags = null,
     ) {
         // noop.
     }
@@ -33,9 +31,13 @@ final readonly class Options implements OptionsInterface
     /**
      * {@inheritdoc}
      */
-    public function has(string $tag): bool
+    public function withConnection(string $connection): self
     {
-        return null !== $this->tags && \in_array($tag, $this->tags, true);
+        return new self(
+            $connection,
+            $this->isolation,
+            $this->scope,
+        );
     }
 
     /**
@@ -43,90 +45,76 @@ final readonly class Options implements OptionsInterface
      *
      * @param non-empty-string               $connection Optional connection name.
      * @param TransactionIsolationLevel|null $isolation  Optional transaction isolation level.
-     * @param non-empty-string[]|null        $tags       Optional executor tags.
      */
     public static function connection(
         string                     $connection,
         ?TransactionIsolationLevel $isolation = null,
         ?ExecutionScope            $scope = null,
-        ?array                     $tags = null,
     ): self {
-        return new self($connection, $isolation, $scope, $tags);
+        return new self($connection, $isolation, $scope);
     }
 
     /**
      * Creates DbalOptions with READ UNCOMMITTED isolation level.
      *
-     * @param ?non-empty-string       $connection Optional connection name.
-     * @param non-empty-string[]|null $tags       Optional executor tags.
+     * @param ?non-empty-string $connection Optional connection name.
      */
     public static function readUncommitted(
         ?string         $connection = null,
         ?ExecutionScope $scope = null,
-        ?array          $tags = null
     ): self {
         return new self(
             $connection,
             TransactionIsolationLevel::READ_UNCOMMITTED,
             $scope,
-            $tags,
         );
     }
 
     /**
      * Creates DbalOptions with READ COMMITTED isolation level.
      *
-     * @param ?non-empty-string       $connection Optional connection name.
-     * @param non-empty-string[]|null $tags       Optional executor tags.
+     * @param ?non-empty-string $connection Optional connection name.
      */
     public static function readCommitted(
         ?string         $connection = null,
         ?ExecutionScope $scope = null,
-        ?array          $tags = null,
     ): self {
         return new self(
             $connection,
             TransactionIsolationLevel::READ_COMMITTED,
             $scope,
-            $tags,
         );
     }
 
     /**
      * Creates DbalOptions with REPEATABLE READ isolation level.
      *
-     * @param ?non-empty-string       $connection Optional connection name.
-     * @param non-empty-string[]|null $tags       Optional executor tags.
+     * @param ?non-empty-string $connection Optional connection name.
      */
     public static function repeatableRead(
         ?string         $connection = null,
         ?ExecutionScope $scope = null,
-        ?array          $tags = null,
     ): self {
         return new self(
             $connection,
             TransactionIsolationLevel::REPEATABLE_READ,
             $scope,
-            $tags,
         );
     }
 
     /**
      * Creates DbalOptions with SERIALIZABLE isolation level.
      *
-     * @param ?non-empty-string       $connection Optional connection name.
-     * @param non-empty-string[]|null $tags       Optional executor tags.
+     * @param ?non-empty-string $connection Optional connection name.
      */
     public static function serializable(
         ?string         $connection = null,
         ?ExecutionScope $scope = null,
-        ?array          $tags = null,
     ): self {
         return new self(
             $connection,
             TransactionIsolationLevel::SERIALIZABLE,
             $scope,
-            $tags,
         );
     }
 }

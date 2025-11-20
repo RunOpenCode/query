@@ -7,6 +7,7 @@ namespace RunOpenCode\Component\Query\Tests\Middleware;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RunOpenCode\Component\Query\Contract\Executor\AdapterInterface;
+use RunOpenCode\Component\Query\Contract\Executor\OptionsInterface;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
 use RunOpenCode\Component\Query\Contract\Middleware\ContextInterface;
 use RunOpenCode\Component\Query\Contract\Middleware\MiddlewareInterface;
@@ -39,6 +40,12 @@ final class MiddlewareRegistryTest extends TestCase
             ->willReturnCallback(function(string $query, ContextInterface $context, callable $next): ResultInterface {
                 return $next(\sprintf('second(%s)', $query), $context); // @phpstan-ignore-line
             });
+        
+        $adapter
+            ->expects($this->once())
+            ->method('defaults')
+            ->with(OptionsInterface::class)
+            ->willReturn($this->createMock(OptionsInterface::class));
 
         $adapter
             ->expects($this->once())
@@ -73,6 +80,12 @@ final class MiddlewareRegistryTest extends TestCase
 
         $adapter
             ->expects($this->once())
+            ->method('defaults')
+            ->with(OptionsInterface::class)
+            ->willReturn($this->createMock(OptionsInterface::class));
+        
+        $adapter
+            ->expects($this->once())
             ->method('statement')
             ->with('second(first(foo))')
             ->willReturn(0);
@@ -94,6 +107,12 @@ final class MiddlewareRegistryTest extends TestCase
         $this->expectException(LogicException::class);
 
         $adapter = $this->createMock(AdapterInterface::class);
+
+        $adapter
+            ->expects($this->once())
+            ->method('defaults')
+            ->with(OptionsInterface::class)
+            ->willReturn($this->createMock(OptionsInterface::class));
 
         new MiddlewareRegistry([
             new ExecutorMiddleware(new AdapterRegistry([$adapter]))

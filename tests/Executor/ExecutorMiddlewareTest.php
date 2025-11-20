@@ -9,6 +9,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Runtime\PropertyHook;
 use PHPUnit\Framework\TestCase;
 use RunOpenCode\Component\Query\Contract\Executor\AdapterInterface;
+use RunOpenCode\Component\Query\Contract\Executor\OptionsInterface;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
 use RunOpenCode\Component\Query\Exception\LogicException;
 use RunOpenCode\Component\Query\Executor\AdapterRegistry;
@@ -37,10 +38,16 @@ final class ExecutorMiddlewareTest extends TestCase
     {
         $this->adapter
             ->expects($this->once())
+            ->method('defaults')
+            ->with(OptionsInterface::class)
+            ->willReturn($this->createMock(OptionsInterface::class));
+        
+        $this->adapter
+            ->expects($this->once())
             ->method('query')
-            ->with('foo', null, null)
+            ->with('foo', $this->isInstanceOf(OptionsInterface::class), null)
             ->willReturn($this->createMock(ResultInterface::class));
-
+        
         // @phpstan-ignore-next-line
         $this->middleware->query('foo', new Context(source: 'foo'), static fn(): null => null);
     }
@@ -51,8 +58,14 @@ final class ExecutorMiddlewareTest extends TestCase
         $this->adapter
             ->expects($this->once())
             ->method('statement')
-            ->with('foo', null, null)
+            ->with('foo', $this->isInstanceOf(OptionsInterface::class), null)
             ->willReturn(1);
+
+        $this->adapter
+            ->expects($this->once())
+            ->method('defaults')
+            ->with(OptionsInterface::class)
+            ->willReturn($this->createMock(OptionsInterface::class));
 
         // @phpstan-ignore-next-line
         $this->middleware->statement('foo', new Context(source: 'foo'), static fn(): null => null);

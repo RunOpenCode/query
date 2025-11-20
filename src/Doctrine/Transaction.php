@@ -15,7 +15,7 @@ use RunOpenCode\Component\Query\Contract\Executor\TransactionInterface;
 final readonly class Transaction implements TransactionInterface
 {
     /**
-     * Creates a new Doctrine transaction instance.
+     * Creates new Doctrine transaction instance.
      *
      * Object of this class can configure Dbal and Orm transaction
      * as well, since both use the same configuration options.
@@ -30,6 +30,18 @@ final readonly class Transaction implements TransactionInterface
         // noop.
     }
 
+    /**
+     * Creates new Doctrine transaction instance for connection.
+     * 
+     * @param non-empty-string $connection Connection name.
+     *
+     * @return self
+     */
+    public static function connection(string $connection): self
+    {
+        return new self($connection);
+    }
+    
     /**
      * Create transaction configuration with READ UNCOMMITED isolation level.
      *

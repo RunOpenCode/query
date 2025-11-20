@@ -2,27 +2,27 @@
 
 declare(strict_types=1);
 
-namespace RunOpenCode\Component\Query\Doctrine\Replica;
+namespace RunOpenCode\Component\Query\Replica;
 
-enum FallbackStrategy
+enum FallbackStrategy: string
 {
     /**
      * Do not use fallback connection.
      */
-    case None;
+    case None = 'none';
 
     /**
      * Use replica connections and primary as fallback.
      */
-    case Any;
+    case Any = 'any';
 
     /**
      * Use primary connection as fallback.
      */
-    case Primary;
+    case Primary = 'primary';
 
     /**
      * Use any replica connection.
      */
-    case Replicas;
+    case Replicas = 'replicas';
 }

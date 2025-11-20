@@ -66,20 +66,6 @@ interface ContextInterface
     public function peak(object|string $type): ?object;
 
     /**
-     * Filter configurations within context.
-     *
-     * Filtering does NOT marks configuration object as used within context.
-     *
-     * @template T
-     *
-     * @param callable(($type is null ? object : T)): bool $predicate Filter function applied to configurations.
-     * @param class-string<T>|null                         $type      You may optionally provide which types of configurations should be subject of filtering.
-     *
-     * @return ($type is null ? list<object> : list<T>)
-     */
-    public function filter(callable $predicate, ?string $type = null): array;
-
-    /**
      * Requires configuration object from context.
      *
      * Configuration is requested by providing type of object, and if such object is
@@ -98,6 +84,28 @@ interface ContextInterface
      * @return T|null
      */
     public function require(object|string $type): ?object;
+
+    /**
+     * Create new context with replaced configuration.
+     *
+     * Context will preserve usage status of all configurations, including
+     * replacement.
+     *
+     * @param class-string<object>|object $subject     Current configuration which is being replaced.
+     * @param object                      $replacement New replacement configuration.
+     *
+     * @return self New instance of execution context.
+     */
+    public function replace(object|string $subject, object $replacement): self;
+
+    /**
+     * Create new context with additional configuration.
+     * 
+     * @param object $configuration Configuration to append.
+     *
+     * @return self New instance of execution context.
+     */
+    public function append(object $configuration): self;
 
     /**
      * Indicates whether context is depleted (has no unused configurations).
