@@ -6,6 +6,7 @@ namespace RunOpenCode\Component\Query\Parser;
 
 use RunOpenCode\Component\Query\Contract\Parser\ParserInterface;
 use RunOpenCode\Component\Query\Contract\Parser\VariablesInterface;
+use RunOpenCode\Component\Query\Exception\UnsupportedException;
 
 /**
  * Void parser does not perform any parsing at all.
@@ -36,6 +37,13 @@ final class VoidParser implements ParserInterface
      */
     public function parse(string $source, VariablesInterface $variables): string
     {
+        if ($variables instanceof ContextAwareVariables && ($variables->variables?->count() ?? 0) > 0) {
+            throw new UnsupportedException(\sprintf(
+                'Void parser can not utilize variables, number of variables provided: %d.',
+                $variables->variables->count(), // @phpstan-ignore-line
+            ));
+        }
+
         return $source;
     }
 }

@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace RunOpenCode\Component\Query\Contract\Parser;
 
+use RunOpenCode\Component\Query\Exception\NotExistsException;
+use RunOpenCode\Component\Query\Exception\ParserSyntaxException;
+use RunOpenCode\Component\Query\Exception\RuntimeException;
+
 /**
  * Query/statement parsers.
  *
@@ -43,6 +47,10 @@ interface ParserInterface
      * @param VariablesInterface $variables Variables to use during parsing.
      *
      * @return non-empty-string Parsed query.
+     *
+     * @throws ParserSyntaxException If source contains syntax errors.
+     * @throws NotExistsException If source could not be found.
+     * @throws RuntimeException If unexpected exception occurred during parsing process.
      */
     public function parse(string $source, VariablesInterface $variables): string;
 }

@@ -65,6 +65,10 @@ final class AdapterRegistryTest extends TestCase
 
         $adapter = $this->createMock(AdapterInterface::class);
 
+        $adapter
+            ->method(PropertyHook::get('name'))
+            ->willReturn('foo');
+
         new AdapterRegistry([
             $adapter,
             $adapter,
@@ -76,6 +80,12 @@ final class AdapterRegistryTest extends TestCase
     {
         $this->expectException(RuntimeException::class);
 
-        new AdapterRegistry()->get('first');
+        $adapter = $this->createMock(AdapterInterface::class);
+
+        $adapter
+            ->method(PropertyHook::get('name'))
+            ->willReturn('foo');
+
+        new AdapterRegistry([$adapter])->get('bar');
     }
 }

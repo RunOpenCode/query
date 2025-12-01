@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace RunOpenCode\Component\Query;
 
+use RunOpenCode\Component\Query\Contract\Executor\AffectedInterface;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
-use RunOpenCode\Component\Query\Contract\Executor\TransactionInterface;
 use RunOpenCode\Component\Query\Contract\ExecutorInterface;
 use RunOpenCode\Component\Query\Exception\LogicException;
 use RunOpenCode\Component\Query\Executor\AdapterRegistry;
 use RunOpenCode\Component\Query\Executor\TransactionExecutor;
-use RunOpenCode\Component\Query\Middleware\Context;
-use RunOpenCode\Component\Query\Middleware\MiddlewareRegistry;
+use RunOpenCode\Component\Query\Middleware\ContextFactory;
+use RunOpenCode\Component\Query\Middleware\MiddlewareChain;
+use RunOpenCode\Component\Query\Middleware\TransactionContext;
 
 /**
  * Default implementation of {@see ExecutorInterface}.
@@ -23,9 +24,13 @@ final class Executor implements ExecutorInterface
      */
     private bool $current = true;
 
+    /**
+     * @param MiddlewareChain $middlewares
+     * @param AdapterRegistry $adapters
+     */
     public function __construct(
-        private readonly MiddlewareRegistry $middlewares,
-        private readonly AdapterRegistry    $adapters,
+        private readonly MiddlewareChain $middlewares,
+        private readonly AdapterRegistry $adapters,
     ) {
         // noop.
     }
@@ -39,47 +44,45 @@ final class Executor implements ExecutorInterface
             throw new LogicException('You are invoking method of executor which is not in current transactional scope.');
         }
 
-        return $this->middlewares->query($query, new Context(
-            source: $query,
-            configurations: $configuration
-        ));
+        $context = ContextFactory::instance($this->adapters)->query($query, null, ...$configuration);
+
+        return $this->middlewares->query($query, $context);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function statement(string $statement, object ...$configuration): int
+    public function statement(string $statement, object ...$configuration): AffectedInterface
     {
         if (!$this->current) {
             throw new LogicException('You are invoking method of executor which is not in current transactional scope.');
         }
 
-        return $this->middlewares->statement($statement, new Context(
-            source: $statement,
-            configurations: $configuration
-        ));
+        $context = ContextFactory::instance($this->adapters)->statement($statement, null, ...$configuration);
+
+        return $this->middlewares->statement($statement, $context);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function transactional(callable $transactional, TransactionInterface ...$transaction): mixed
+    public function transactional(callable $function, object ...$configuration): mixed
     {
         if (!$this->current) {
             throw new LogicException('You are invoking method of executor which is not in current transactional scope.');
         }
-
-        $executor = new TransactionExecutor(
-            $this->middlewares,
-            $this->adapters,
-            $transactional,
-            \array_values($transaction),
-        );
 
         $this->current = false;
 
+        $context = ContextFactory::instance($this->adapters)->transaction(null, ...$configuration);
+
         try {
-            return $executor->__invoke();
+            return $this->middlewares->transactional(new TransactionExecutor(
+                $this->middlewares,
+                $this->adapters,
+                $context,
+                $function
+            ), $context);
         } finally {
             $this->current = true;
         }

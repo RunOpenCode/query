@@ -7,8 +7,8 @@ namespace RunOpenCode\Component\Query\Parser;
 use RunOpenCode\Component\Query\Contract\Parser\ParserInterface;
 use RunOpenCode\Component\Query\Contract\Parser\VariablesInterface;
 use RunOpenCode\Component\Query\Exception\NotExistsException;
+use RunOpenCode\Component\Query\Exception\ParserSyntaxException;
 use RunOpenCode\Component\Query\Exception\RuntimeException;
-use RunOpenCode\Component\Query\Exception\SyntaxException;
 use Twig\Environment;
 use Twig\Error\LoaderError;
 use Twig\Error\SyntaxError;
@@ -69,7 +69,7 @@ final class TwigParser implements ParserInterface
                 $template,
             ), $exception);
         } catch (SyntaxError $exception) {
-            throw new SyntaxException(\sprintf(
+            throw new ParserSyntaxException(\sprintf(
                 'Source "%s" contains Twig syntax error and could not be compiled.',
                 $template,
             ), $exception);

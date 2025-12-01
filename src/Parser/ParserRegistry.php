@@ -39,7 +39,7 @@ final readonly class ParserRegistry
      * @param non-empty-string   $query     Query or reference to a query to parse.
      * @param VariablesInterface $variables Variables to use during parsing.
      *
-     * @return string Parsed query.
+     * @return non-empty-string Parsed query.
      */
     public function parse(string $query, VariablesInterface $variables): string
     {

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace RunOpenCode\Component\Query\Parser;
 
 use RunOpenCode\Component\Query\Contract\Executor\ParametersInterface;
-use RunOpenCode\Component\Query\Contract\Middleware\ContextInterface;
+use RunOpenCode\Component\Query\Contract\Context\ContextInterface;
 use RunOpenCode\Component\Query\Contract\Parser\VariablesInterface;
 use RunOpenCode\Component\Query\Exception\LogicException;
 use RunOpenCode\Component\Query\Exception\OutOfBoundsException;
@@ -41,24 +41,24 @@ final readonly class ContextAwareVariables implements VariablesInterface
     /**
      * @var array<non-empty-string, mixed>
      */
-    private array $variables;
+    private array $bag;
 
     /**
      * Create frozen, context aware variable bag.
      *
-     * @param ContextInterface         $context    Execution context.
+     * @param \RunOpenCode\Component\Query\Contract\Context\ContextInterface         $context    Execution context.
      * @param VariablesInterface|null  $variables  Variables to use for query/statement parsing.
      * @param ParametersInterface|null $parameters Parameters to use for query/statement parsing.
      */
     public function __construct(
-        ContextInterface     $context,
-        ?VariablesInterface  $variables,
-        ?ParametersInterface $parameters,
+        public ContextInterface     $context,
+        public ?VariablesInterface  $variables,
+        public ?ParametersInterface $parameters,
     ) {
         /** @var array<non-empty-string, mixed> $params */
-        $params          = null !== $parameters?->values && !\array_is_list($parameters->values) ? $parameters->values : [];
-        $this->parser    = $variables?->parser;
-        $this->variables = \array_merge(
+        $params       = null !== $parameters?->values && !\array_is_list($parameters->values) ? $parameters->values : [];
+        $this->parser = $variables?->parser;
+        $this->bag    = \array_merge(
             $params,
             $variables ? \iterator_to_array($variables) : [],
             [
@@ -118,7 +118,7 @@ final readonly class ContextAwareVariables implements VariablesInterface
      */
     public function getIterator(): \Traversable
     {
-        yield from $this->variables;
+        yield from $this->bag;
     }
 
     /**
@@ -126,7 +126,7 @@ final readonly class ContextAwareVariables implements VariablesInterface
      */
     public function offsetExists(mixed $offset): bool
     {
-        return \array_key_exists($offset, $this->variables);
+        return \array_key_exists($offset, $this->bag);
     }
 
     /**
@@ -134,7 +134,7 @@ final readonly class ContextAwareVariables implements VariablesInterface
      */
     public function offsetGet(mixed $offset): mixed
     {
-        return \array_key_exists($offset, $this->variables) ? $this->variables[$offset] : throw new OutOfBoundsException(\sprintf(
+        return \array_key_exists($offset, $this->bag) ? $this->bag[$offset] : throw new OutOfBoundsException(\sprintf(
             'Variable "%s" does not exist in variables bag.',
             $offset,
         ));
@@ -167,6 +167,6 @@ final readonly class ContextAwareVariables implements VariablesInterface
      */
     public function count(): int
     {
-        return \count($this->variables);
+        return \count($this->bag);
     }
 }

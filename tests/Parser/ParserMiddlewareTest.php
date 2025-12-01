@@ -8,11 +8,14 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Runtime\PropertyHook;
 use PHPUnit\Framework\TestCase;
+use RunOpenCode\Component\Query\Contract\Executor\AffectedInterface;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
 use RunOpenCode\Component\Query\Contract\Parser\ParserInterface;
 use RunOpenCode\Component\Query\Contract\Parser\VariablesInterface;
+use RunOpenCode\Component\Query\Doctrine\Configuration\Dbal;
 use RunOpenCode\Component\Query\Doctrine\Parameters\Named;
-use RunOpenCode\Component\Query\Middleware\Context;
+use RunOpenCode\Component\Query\Middleware\QueryContext;
+use RunOpenCode\Component\Query\Middleware\StatementContext;
 use RunOpenCode\Component\Query\Parser\ContextAwareVariables;
 use RunOpenCode\Component\Query\Parser\ParserMiddleware;
 use RunOpenCode\Component\Query\Parser\ParserRegistry;
@@ -48,7 +51,7 @@ final class ParserMiddlewareTest extends TestCase
     {
         $vars    = new Variables()->add('baz', 'qux');
         $params  = new Named()->add('foo', 'bar');
-        $context = new Context(source: 'foo', configurations: [$params, $vars]);
+        $context = new QueryContext('foo', Dbal::connection('foo'), null, $params, $vars);
 
         $this
             ->parser
@@ -81,7 +84,7 @@ final class ParserMiddlewareTest extends TestCase
     {
         $vars    = new Variables()->add('baz', 'qux');
         $params  = new Named()->add('foo', 'bar');
-        $context = new Context(source: 'foo', configurations: [$params, $vars]);
+        $context = new StatementContext('foo', Dbal::connection('foo'), null, $params, $vars);
 
         $this
             ->parser
@@ -106,6 +109,6 @@ final class ParserMiddlewareTest extends TestCase
             )
             ->willReturn('foo_parsed');
 
-        $this->middleware->statement('foo', $context, fn(): int => 0);
+        $this->middleware->statement('foo', $context, fn(): AffectedInterface => $this->createMock(AffectedInterface::class));
     }
 }

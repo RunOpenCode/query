@@ -7,6 +7,7 @@ namespace RunOpenCode\Component\Query\Tests;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RunOpenCode\Component\Query\Cache\CacheMiddleware;
+use RunOpenCode\Component\Query\Contract\Executor\AffectedInterface;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
 use RunOpenCode\Component\Query\Contract\ExecutorInterface;
 use RunOpenCode\Component\Query\Doctrine\Dbal\Adapter;
@@ -14,7 +15,7 @@ use RunOpenCode\Component\Query\Doctrine\Parameters\Named;
 use RunOpenCode\Component\Query\Doctrine\Parameters\Positional;
 use RunOpenCode\Component\Query\Exception\LogicException;
 use RunOpenCode\Component\Query\Executor;
-use RunOpenCode\Component\Query\Middleware\MiddlewareRegistry;
+use RunOpenCode\Component\Query\Middleware\MiddlewareChain;
 use RunOpenCode\Component\Query\Parser\ParserMiddleware;
 use RunOpenCode\Component\Query\Parser\ParserRegistry;
 use RunOpenCode\Component\Query\Parser\TwigParser;
@@ -40,7 +41,7 @@ final class ExecutorTest extends TestCase
             new Adapter('bar', $this->createMySqlConnection(MySqlDatabase::Bar)),
             new Adapter('baz', $this->createSqlLiteConnection(dataset: 'empty')),
         ]);
-        $this->executor = new Executor(new MiddlewareRegistry([
+        $this->executor = new Executor(new MiddlewareChain([
             new CacheMiddleware(new ArrayAdapter()),
             new ParserMiddleware(new ParserRegistry([
                 new TwigParser(TwigFactory::create()),
@@ -49,7 +50,7 @@ final class ExecutorTest extends TestCase
             new ReplicaMiddleware(
                 'foo',
                 ['baz'],
-                $adapters
+                $adapters,
             ),
             new Executor\ExecutorMiddleware($adapters),
         ]), $adapters);
@@ -94,7 +95,7 @@ final class ExecutorTest extends TestCase
     #[Test]
     public function statement(): void
     {
-        $result = $this->executor->statement(
+        $affected = $this->executor->statement(
             'default_dataset/insert.sql.twig',
             new Positional()
                 ->integer(42)
@@ -102,13 +103,13 @@ final class ExecutorTest extends TestCase
                 ->string('bar')
         );
 
-        $this->assertSame(1, $result);
+        $this->assertCount(1, $affected);
     }
 
     #[Test]
     public function statement_inside_transaction(): void
     {
-        $result = $this->executor->transactional(static function(ExecutorInterface $executor): int {
+        $affected = $this->executor->transactional(static function(ExecutorInterface $executor): AffectedInterface {
             return $executor->statement(
                 'default_dataset/insert.sql.twig',
                 new Positional()
@@ -118,7 +119,7 @@ final class ExecutorTest extends TestCase
             );
         });
 
-        $this->assertSame(1, $result);
+        $this->assertCount(1, $affected);
     }
 
     #[Test]
@@ -126,7 +127,7 @@ final class ExecutorTest extends TestCase
     {
         $this->expectException(LogicException::class);
 
-        $this->executor->transactional(function(): int {
+        $this->executor->transactional(function(): AffectedInterface {
             return $this->executor->statement(
                 'default_dataset/insert.sql.twig',
                 new Positional()

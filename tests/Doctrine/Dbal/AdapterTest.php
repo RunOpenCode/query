@@ -13,10 +13,10 @@ use PHPUnit\Framework\Attributes\PreCondition;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RunOpenCode\Component\Query\Doctrine\Dbal\Adapter;
-use RunOpenCode\Component\Query\Doctrine\Dbal\Options;
+use RunOpenCode\Component\Query\Doctrine\Configuration\Dbal;
 use RunOpenCode\Component\Query\Doctrine\Parameters\Named;
 use RunOpenCode\Component\Query\Doctrine\Parameters\Positional;
-use RunOpenCode\Component\Query\Doctrine\Transaction;
+use RunOpenCode\Component\Query\Doctrine\Configuration\Transaction;
 use RunOpenCode\Component\Query\Exception\BeginTransactionException;
 use RunOpenCode\Component\Query\Exception\CommitTransactionException;
 use RunOpenCode\Component\Query\Exception\ConnectionException;
@@ -37,17 +37,20 @@ final class AdapterTest extends TestCase
 
     private Adapter $adapter;
 
+    private Dbal $default;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->connection = $this->createMySqlConnection(MySqlDatabase::Foo);
         $this->adapter    = new Adapter('foo', $this->connection);
+        $this->default    = Dbal::connection($this->adapter->name);
     }
 
     #[PreCondition]
     protected function dataset_ready(): void
     {
-        $this->assertCount(5, $this->adapter->query('SELECT * FROM test', new Options()));
+        $this->assertCount(5, $this->adapter->query('SELECT * FROM test', $this->default));
         $this->assertSame(TransactionIsolationLevel::REPEATABLE_READ, $this->connection->getTransactionIsolation());
     }
 
@@ -56,15 +59,15 @@ final class AdapterTest extends TestCase
     {
         $this->adapter->begin(new Transaction($this->adapter->name));
 
-        $affected  = $this->adapter->statement('DELETE FROM test', new Options());
-        $available = $this->adapter->query('SELECT COUNT(*) AS cnt FROM test', new Options())->getScalar();
+        $affected  = $this->adapter->statement('DELETE FROM test', $this->default);
+        $available = $this->adapter->query('SELECT COUNT(*) AS cnt FROM test', $this->default)->getScalar();
 
         $this->adapter->commit();
 
-        $this->assertSame(5, $affected);
+        $this->assertCount(5, $affected);
         $this->assertSame(0, $available);
 
-        $actual = $this->adapter->query('SELECT COUNT(*) AS cnt FROM test', new Options())->getScalar();
+        $actual = $this->adapter->query('SELECT COUNT(*) AS cnt FROM test', $this->default)->getScalar();
 
         $this->assertSame(0, $actual);
     }
@@ -74,15 +77,15 @@ final class AdapterTest extends TestCase
     {
         $this->adapter->begin(new Transaction($this->adapter->name));
 
-        $affected  = $this->adapter->statement('DELETE FROM test', new Options());
-        $available = $this->adapter->query('SELECT COUNT(*) AS cnt FROM test', new Options())->getScalar();
+        $affected  = $this->adapter->statement('DELETE FROM test', $this->default);
+        $available = $this->adapter->query('SELECT COUNT(*) AS cnt FROM test', $this->default)->getScalar();
 
-        $this->adapter->rollback();
+        $this->adapter->rollback(null);
 
-        $this->assertSame(5, $affected);
+        $this->assertCount(5, $affected);
         $this->assertSame(0, $available);
 
-        $actual = $this->adapter->query('SELECT COUNT(*) AS cnt FROM test', new Options())->getScalar();
+        $actual = $this->adapter->query('SELECT COUNT(*) AS cnt FROM test', $this->default)->getScalar();
 
         $this->assertSame(5, $actual);
     }
@@ -92,7 +95,7 @@ final class AdapterTest extends TestCase
     {
         $this->adapter->begin(Transaction::serializable($this->adapter->name));
 
-        $this->assertSame(5, $this->adapter->statement('DELETE FROM test', new Options()));
+        $this->assertCount(5, $this->adapter->statement('DELETE FROM test', $this->default));
         $this->assertSame(TransactionIsolationLevel::SERIALIZABLE, $this->connection->getTransactionIsolation());
 
         $this->adapter->commit();
@@ -105,10 +108,10 @@ final class AdapterTest extends TestCase
     {
         $this->adapter->begin(Transaction::serializable($this->adapter->name));
 
-        $this->assertSame(5, $this->adapter->statement('DELETE FROM test', new Options()));
+        $this->assertCount(5, $this->adapter->statement('DELETE FROM test', $this->default));
         $this->assertSame(TransactionIsolationLevel::SERIALIZABLE, $this->connection->getTransactionIsolation());
 
-        $this->adapter->rollback();
+        $this->adapter->rollback(null);
 
         $this->assertSame(TransactionIsolationLevel::REPEATABLE_READ, $this->connection->getTransactionIsolation());
     }
@@ -120,10 +123,10 @@ final class AdapterTest extends TestCase
 
         $this->adapter->begin(Transaction::serializable($this->adapter->name));
 
-        $this->assertSame(5, $this->adapter->statement('DELETE FROM test', new Options()));
+        $this->assertCount(5, $this->adapter->statement('DELETE FROM test', $this->default));
         $this->assertSame(TransactionIsolationLevel::SERIALIZABLE, $this->connection->getTransactionIsolation());
 
-        $this->adapter->rollback();
+        $this->adapter->rollback(null);
 
         $this->assertSame(TransactionIsolationLevel::SERIALIZABLE, $this->connection->getTransactionIsolation());
     }
@@ -131,7 +134,7 @@ final class AdapterTest extends TestCase
     #[Test]
     public function query_without_parameters(): void
     {
-        $result = $this->adapter->query('SELECT * FROM test WHERE id = 1', new Options());
+        $result = $this->adapter->query('SELECT * FROM test WHERE id = 1', $this->default);
 
         $this->assertSame([
             ['id' => 1, 'title' => 'Title 1', 'description' => 'Description 1'],
@@ -143,7 +146,7 @@ final class AdapterTest extends TestCase
     {
         $result = $this->adapter->query(
             'SELECT * FROM test WHERE id = :id',
-            new Options(),
+            $this->default,
             new Named()
                 ->integer('id', 1)
         );
@@ -158,7 +161,7 @@ final class AdapterTest extends TestCase
     {
         $result = $this->adapter->query(
             'SELECT * FROM test WHERE id = ?',
-            new Options(),
+            $this->default,
             new Positional()
                 ->integer(1)
         );
@@ -171,31 +174,31 @@ final class AdapterTest extends TestCase
     #[Test]
     public function statement_with_named_parameters(): void
     {
-        $this->assertCount(0, $this->adapter->query('SELECT * FROM test WHERE id = 42', new Options()));
+        $this->assertCount(0, $this->adapter->query('SELECT * FROM test WHERE id = 42', $this->default));
 
         $affected = $this->adapter->statement(
             'INSERT INTO test (id, title, description) VALUES  (:id, :title, :description)',
-            new Options(),
+            $this->default,
             new Named()
                 ->integer('id', 42)
                 ->string('title', 'foo')
                 ->string('description', 'bar'),
         );
 
-        $this->assertSame(1, $affected);
+        $this->assertCount(1, $affected);
         $this->assertSame([
             ['id' => 42, 'title' => 'foo', 'description' => 'bar'],
-        ], $this->adapter->query('SELECT * FROM test WHERE id = 42', new Options())->fetchAllAssociative());
+        ], $this->adapter->query('SELECT * FROM test WHERE id = 42', $this->default)->fetchAllAssociative());
     }
 
     #[Test]
     public function statement_with_positional_parameters(): void
     {
-        $this->assertCount(0, $this->adapter->query('SELECT * FROM test WHERE id IN (42, 43)', new Options()));
+        $this->assertCount(0, $this->adapter->query('SELECT * FROM test WHERE id IN (42, 43)', $this->default));
 
         $affected = $this->adapter->statement(
             'INSERT INTO test (id, title, description) VALUES  (?, ?, ?), (?, ?, ?)',
-            new Options(),
+            $this->default,
             new Positional()
                 ->integer(42)
                 ->string('foo')
@@ -205,17 +208,17 @@ final class AdapterTest extends TestCase
                 ->string('qux'),
         );
 
-        $this->assertSame(2, $affected);
+        $this->assertCount(2, $affected);
         $this->assertSame([
             ['id' => 42, 'title' => 'foo', 'description' => 'bar'],
             ['id' => 43, 'title' => 'baz', 'description' => 'qux'],
-        ], $this->adapter->query('SELECT * FROM test WHERE id IN(42, 43) ORDER BY id', new Options())->fetchAllAssociative());
+        ], $this->adapter->query('SELECT * FROM test WHERE id IN(42, 43) ORDER BY id', $this->default)->fetchAllAssociative());
     }
 
     #[Test]
     public function query_with_custom_isolation(): void
     {
-        $this->adapter->query('SELECT * FROM test', Options::serializable());
+        $this->adapter->query('SELECT * FROM test', $this->default->withSerializableIsolation());
 
         $this->assertSqlLogSame([
             'SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE',
@@ -231,7 +234,7 @@ final class AdapterTest extends TestCase
     #[Test]
     public function statement_with_custom_isolation(): void
     {
-        $this->adapter->statement('DELETE FROM test WHERE id = 1', Options::serializable());
+        $this->adapter->statement('DELETE FROM test WHERE id = 1', $this->default->withSerializableIsolation());
 
         $this->assertSqlLogSame([
             'SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE',
@@ -250,7 +253,7 @@ final class AdapterTest extends TestCase
         $this->connection->setTransactionIsolation(TransactionIsolationLevel::SERIALIZABLE);
         $this->clearAllDbalLogs();
 
-        $this->adapter->query('SELECT * FROM test', Options::serializable());
+        $this->adapter->query('SELECT * FROM test', $this->default->withSerializableIsolation());
 
         $this->assertSqlLogSame([
             'SELECT * FROM test',
@@ -351,7 +354,7 @@ final class AdapterTest extends TestCase
             ->willThrowException(new GenericDbalConnectionException());
 
         $adapter->begin(new Transaction($adapter->name));
-        $adapter->rollback();
+        $adapter->rollback(null);
     }
 
     #[Test]
@@ -372,7 +375,7 @@ final class AdapterTest extends TestCase
             ->willThrowException(new \Exception());
 
         $adapter->begin(new Transaction($adapter->name));
-        $adapter->rollback();
+        $adapter->rollback(null);
     }
 
     #[Test]
@@ -380,7 +383,7 @@ final class AdapterTest extends TestCase
     {
         $this->expectException(SyntaxException::class);
 
-        $this->adapter->query('FOO', new Options());
+        $this->adapter->query('FOO', $this->default);
     }
 
     #[Test]
@@ -388,7 +391,7 @@ final class AdapterTest extends TestCase
     {
         $this->expectException(DriverException::class);
 
-        $this->adapter->query('SELECT * FROM foo', new Options());
+        $this->adapter->query('SELECT * FROM foo', $this->default);
     }
 
     #[Test]
@@ -404,7 +407,7 @@ final class AdapterTest extends TestCase
             'host'     => 'mysql.local',
         ]));
 
-        $adapter->query('SELECT * FROM test', new Options());
+        $adapter->query('SELECT * FROM test', $this->default);
     }
 
     #[Test]
@@ -423,7 +426,7 @@ final class AdapterTest extends TestCase
                 null,
             ));
 
-        $adapter->query('SELECT * FROM test', new Options());
+        $adapter->query('SELECT * FROM test', $this->default);
     }
 
     #[Test]
@@ -439,6 +442,6 @@ final class AdapterTest extends TestCase
             ->method($this->anything())
             ->willThrowException(new \RuntimeException('Some runtime error'));
 
-        $adapter->query('SELECT * FROM test', new Options());
+        $adapter->query('SELECT * FROM test', $this->default);
     }
 }

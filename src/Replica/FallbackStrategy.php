@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace RunOpenCode\Component\Query\Replica;
 
+/**
+ * Fallback strategy for replica.
+ */
 enum FallbackStrategy: string
 {
     /**
@@ -12,7 +15,7 @@ enum FallbackStrategy: string
     case None = 'none';
 
     /**
-     * Use replica connections and primary as fallback.
+     * Use all replica connections first and than primary connection as last fallback.
      */
     case Any = 'any';
 
@@ -22,7 +25,7 @@ enum FallbackStrategy: string
     case Primary = 'primary';
 
     /**
-     * Use any replica connection.
+     * Use any replica connection, but don't use primary connection.
      */
     case Replicas = 'replicas';
 }

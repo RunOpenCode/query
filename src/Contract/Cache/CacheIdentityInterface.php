@@ -18,14 +18,14 @@ use Psr\Cache\CacheItemInterface;
  * Cache resolver callable will be invoked with two arguments:
  *
  * - {@see CacheItemInterface} $item - cache item that will be stored,
- * - {@see CacheableResultInterface} $result - result that is intended to be cached.
+ * - mixed $result - result that is intended to be cached.
  *
  * You may use these arguments to set tags and TTL on the cache item.
  *
  * If you wish to prevent caching of the result, you may return `FALSE`
  * from the resolver callable.
  *
- * @phpstan-type CacheResolverCallable = \Closure(CacheItemInterface, CacheableResultInterface=): (false|void)
+ * @phpstan-type CacheResolverCallable = \Closure(CacheItemInterface, mixed=): (false|void)
  */
 interface CacheIdentityInterface
 {

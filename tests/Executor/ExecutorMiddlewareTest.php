@@ -8,14 +8,18 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Runtime\PropertyHook;
 use PHPUnit\Framework\TestCase;
+use RunOpenCode\Component\Query\Contract\Configuration\ExecutionInterface;
 use RunOpenCode\Component\Query\Contract\Executor\AdapterInterface;
-use RunOpenCode\Component\Query\Contract\Executor\OptionsInterface;
+use RunOpenCode\Component\Query\Contract\Executor\AffectedInterface;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
+use RunOpenCode\Component\Query\Doctrine\Configuration\Dbal;
+use RunOpenCode\Component\Query\Doctrine\Configuration\Transaction;
 use RunOpenCode\Component\Query\Exception\LogicException;
 use RunOpenCode\Component\Query\Executor\AdapterRegistry;
 use RunOpenCode\Component\Query\Executor\ExecutorMiddleware;
-use RunOpenCode\Component\Query\Executor\TransactionScope;
-use RunOpenCode\Component\Query\Middleware\Context;
+use RunOpenCode\Component\Query\Middleware\QueryContext;
+use RunOpenCode\Component\Query\Middleware\StatementContext;
+use RunOpenCode\Component\Query\Middleware\TransactionContext;
 
 final class ExecutorMiddlewareTest extends TestCase
 {
@@ -26,8 +30,13 @@ final class ExecutorMiddlewareTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->adapter = $this->createMock(AdapterInterface::class);
 
-        $this->adapter    = $this->createMock(AdapterInterface::class);
+        $this
+            ->adapter
+            ->method(PropertyHook::get('name'))
+            ->willReturn('foo');
+
         $this->middleware = new ExecutorMiddleware(new AdapterRegistry([
             $this->adapter,
         ]));
@@ -36,39 +45,47 @@ final class ExecutorMiddlewareTest extends TestCase
     #[Test]
     public function query(): void
     {
-        $this->adapter
-            ->expects($this->once())
-            ->method('defaults')
-            ->with(OptionsInterface::class)
-            ->willReturn($this->createMock(OptionsInterface::class));
+        $expected = $this->createMock(ResultInterface::class);
 
         $this->adapter
             ->expects($this->once())
             ->method('query')
-            ->with('foo', $this->isInstanceOf(OptionsInterface::class), null)
-            ->willReturn($this->createMock(ResultInterface::class));
+            ->with('bar', $this->isInstanceOf(ExecutionInterface::class), null)
+            ->willReturn($expected);
 
-        // @phpstan-ignore-next-line
-        $this->middleware->query('foo', new Context(source: 'foo'), static fn(): null => null);
+        $actual = $this->middleware->query(
+            'bar',
+            new QueryContext(
+                query: 'bar',
+                execution: Dbal::connection('foo'),
+            ),
+            static fn(): null => null, // @phpstan-ignore-line
+        );
+
+        $this->assertSame($expected, $actual);
     }
 
     #[Test]
     public function statement(): void
     {
+        $expected = $this->createMock(AffectedInterface::class);
+
         $this->adapter
             ->expects($this->once())
             ->method('statement')
-            ->with('foo', $this->isInstanceOf(OptionsInterface::class), null)
-            ->willReturn(1);
+            ->with('bar', $this->isInstanceOf(ExecutionInterface::class), null)
+            ->willReturn($expected);
 
-        $this->adapter
-            ->expects($this->once())
-            ->method('defaults')
-            ->with(OptionsInterface::class)
-            ->willReturn($this->createMock(OptionsInterface::class));
+        $actual = $this->middleware->statement(
+            'bar',
+            new StatementContext(
+                statement: 'bar',
+                execution: Dbal::connection('foo'),
+            ),
+            static fn(): null => null, // @phpstan-ignore-line
+        );
 
-        // @phpstan-ignore-next-line
-        $this->middleware->statement('foo', new Context(source: 'foo'), static fn(): null => null);
+        $this->assertSame($expected, $actual);
     }
 
     #[Test]
@@ -76,28 +93,34 @@ final class ExecutorMiddlewareTest extends TestCase
     {
         $this->expectException(LogicException::class);
 
-        $first  = $this->createMock(AdapterInterface::class);
-        $second = $this->createMock(AdapterInterface::class);
+        $firstAdapter      = $this->createMock(AdapterInterface::class);
+        $secondAdapter     = $this->createMock(AdapterInterface::class);
+        $firstTransaction  = Transaction::connection('first');
+        $secondTransaction = Transaction::connection('second');
 
-        $first
+        $firstAdapter
             ->method(PropertyHook::get('name'))
             ->willReturn('first');
 
-        $second
+        $secondAdapter
             ->method(PropertyHook::get('name'))
             ->willReturn('second');
 
         $middleware = new ExecutorMiddleware(new AdapterRegistry([
-            $first,
-            $second,
+            $firstAdapter,
+            $secondAdapter,
         ]));
 
-        $transaction = new TransactionScope(
-            [$second],
-            new TransactionScope([$first])
-        );
+        $transaction = new TransactionContext([
+            $secondTransaction,
+        ], new TransactionContext([
+            $firstTransaction,
+        ], null));
 
-        // @phpstan-ignore-next-line
-        $middleware->statement('foo', new Context(source: 'foo', transaction: $transaction), static fn(): null => null);
+        $middleware->statement(
+            'foo',
+            new StatementContext('foo', new Dbal('first'), $transaction),
+            static fn(): null => null // @phpstan-ignore-line
+        );
     }
 }

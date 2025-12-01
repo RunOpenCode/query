@@ -9,7 +9,7 @@ use Doctrine\DBAL\Driver\Exception as DbalDriverException;
 use Doctrine\DBAL\Driver\Result as DbalDriverResult;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\DBAL\Result as DbalResult;
-use RunOpenCode\Component\Query\Contract\Cache\CacheableResultInterface;
+use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
 use RunOpenCode\Component\Query\Exception\DriverException;
 use RunOpenCode\Component\Query\Exception\InvalidArgumentException;
 use RunOpenCode\Component\Query\Exception\LogicException;
@@ -25,7 +25,7 @@ use RunOpenCode\Component\Query\Exception\RuntimeException;
  *
  * @implements \IteratorAggregate<array-key, mixed>
  */
-final class Result implements \IteratorAggregate, DbalDriverResult, CacheableResultInterface
+final class Result implements \IteratorAggregate, DbalDriverResult, ResultInterface
 {
     public function __construct(
         private DbalDriverResult|DbalResult $result

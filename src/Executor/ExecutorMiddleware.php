@@ -4,19 +4,27 @@ declare(strict_types=1);
 
 namespace RunOpenCode\Component\Query\Executor;
 
-use RunOpenCode\Component\Query\Contract\Executor\ExecutionScope;
-use RunOpenCode\Component\Query\Contract\Executor\OptionsInterface;
+use RunOpenCode\Component\Query\Contract\Configuration\ExecutionScope;
+use RunOpenCode\Component\Query\Contract\Context\ContextInterface;
+use RunOpenCode\Component\Query\Contract\Executor\AffectedInterface;
 use RunOpenCode\Component\Query\Contract\Executor\ParametersInterface;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
-use RunOpenCode\Component\Query\Contract\Middleware\ContextInterface;
-use RunOpenCode\Component\Query\Contract\Middleware\MiddlewareInterface;
+use RunOpenCode\Component\Query\Contract\Context\QueryContextInterface;
+use RunOpenCode\Component\Query\Contract\Middleware\QueryMiddlewareInterface;
+use RunOpenCode\Component\Query\Contract\Context\StatementContextInterface;
+use RunOpenCode\Component\Query\Contract\Middleware\StatementMiddlewareInterface;
+use RunOpenCode\Component\Query\Contract\Context\TransactionContextInterface;
+use RunOpenCode\Component\Query\Contract\Middleware\TransactionMiddlewareInterface;
 use RunOpenCode\Component\Query\Exception\LogicException;
+use RunOpenCode\Component\Query\Middleware\MiddlewaresConfiguration;
 
 /**
+ * Executor middleware.
+ *
  * Last middleware in execution chain that actually executes query using appropriate
  * executor from registry.
  */
-final readonly class ExecutorMiddleware implements MiddlewareInterface
+final readonly class ExecutorMiddleware implements QueryMiddlewareInterface, StatementMiddlewareInterface, TransactionMiddlewareInterface
 {
     public function __construct(private AdapterRegistry $registry)
     {
@@ -26,36 +34,53 @@ final readonly class ExecutorMiddleware implements MiddlewareInterface
     /**
      * {@inheritdoc}
      */
-    public function query(string $query, ContextInterface $context, callable $next): ResultInterface
+    public function query(string $query, QueryContextInterface $context, callable $next): ResultInterface
     {
-        return $this->execute($query, $context, 'query');
+        try {
+            return $this->execute($query, $context, 'query');
+        } finally {
+            \assert($this->close($context) ?: true); // @phpstan-ignore-line
+        }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function statement(string $statement, ContextInterface $context, callable $next): int
+    public function statement(string $statement, StatementContextInterface $context, callable $next): AffectedInterface
     {
-        return $this->execute($statement, $context, 'statement');
+        try {
+            return $this->execute($statement, $context, 'statement');
+        } finally {
+            \assert($this->close($context) ?: true); // @phpstan-ignore-line
+        }
     }
 
     /**
-     * @param non-empty-string    $query   Query or statement to execute.
-     * @param ContextInterface    $context Middleware execution context.
-     * @param 'query'|'statement' $method  Adapter method to invoke.
-     *
-     * @return ($method is 'query' ? ResultInterface : int)
+     * {@inheritdoc}
      */
-    private function execute(string $query, ContextInterface $context, string $method): ResultInterface|int
+    public function transactional(callable $function, TransactionContextInterface $context, callable $next): mixed
     {
-        $adapter = $this->registry->get($context->peak(OptionsInterface::class)?->connection);
-        /** @var OptionsInterface $options */
-        $options    = $context->require(OptionsInterface::class) ?? $adapter->defaults(OptionsInterface::class);
-        $parameters = $context->require(ParametersInterface::class);
-        $scope      = $options->scope ?? ExecutionScope::Strict;
-        $accepts    = null !== $context->transaction ? $context->transaction->accepts(...) : static fn(): true => true;
+        try {
+            return $function();
+        } finally {
+            \assert($this->close($context) ?: true); // @phpstan-ignore-line
+        }
+    }
 
-        if (!$accepts($adapter, $scope)) {
+    /**
+     * @param non-empty-string                                $query   Query or statement to execute.
+     * @param StatementContextInterface|QueryContextInterface $context Middleware query or statement execution context.
+     * @param 'query'|'statement'                             $method  Adapter method to invoke.
+     *
+     * @return ($method is 'query' ? ResultInterface : AffectedInterface)
+     */
+    private function execute(string $query, StatementContextInterface|QueryContextInterface $context, string $method): ResultInterface|AffectedInterface
+    {
+        $adapter    = $this->registry->get($context->execution->connection);
+        $parameters = $context->require(ParametersInterface::class);
+        $scope      = $context->execution->scope ?? ExecutionScope::Strict;
+
+        if (null !== $context->transaction && !$context->transaction->accepts($scope, $adapter->name)) {
             throw new LogicException(\sprintf(
                 'Execution of %s using connection "%s" within current transaction violates current execution scope configuration "%s".',
                 $method,
@@ -64,6 +89,13 @@ final readonly class ExecutorMiddleware implements MiddlewareInterface
             ));
         }
 
-        return $adapter->{$method}($query, $options, $parameters);
+        return $adapter->{$method}($query, $context->execution, $parameters);
+    }
+
+    private function close(ContextInterface $context): void
+    {
+        if ($context->middlewares instanceof MiddlewaresConfiguration) {
+            $context->middlewares->exhaust();
+        }
     }
 }

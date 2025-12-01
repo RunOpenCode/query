@@ -13,7 +13,7 @@ namespace RunOpenCode\Component\Query\Cache;
 final readonly class Invalidate
 {
     /**
-     * @var list<string> List of cache keys to invalidate.
+     * @var list<non-empty-string> List of cache keys to invalidate.
      */
     public array $keys;
 
@@ -25,8 +25,8 @@ final readonly class Invalidate
     /**
      * Create cache invalidation command (event).
      *
-     * @param string|string[]|null $keys Keys to invalidate.
-     * @param string|string[]|null $tags Tags to invalidate.
+     * @param non-empty-string|non-empty-string[]|null $keys Keys to invalidate.
+     * @param non-empty-string|non-empty-string[]|null $tags Tags to invalidate.
      */
     public function __construct(
         string|array|null $keys = null,
@@ -42,19 +42,19 @@ final readonly class Invalidate
     /**
      * Create cache invalidation command for keys.
      *
-     * @param string|string[] $keys Keys to invalidate
+     * @param non-empty-string|non-empty-string[] $keys Keys to invalidate
      *
      * @return self
      */
     public static function keys(string|array $keys): self
     {
-        return new self($keys);
+        return new self(keys: $keys);
     }
 
     /**
      * Create cache invalidation command for tags.
      *
-     * @param string|string[] $tags Tags to invalidate
+     * @param non-empty-string|non-empty-string[] $tags Tags to invalidate
      *
      * @return self
      */

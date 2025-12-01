@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace RunOpenCode\Component\Query\Contract\Executor;
+namespace RunOpenCode\Component\Query\Contract\Configuration;
 
 /**
  * Determines where within transactional scope query/statement may be executed.

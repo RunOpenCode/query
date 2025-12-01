@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace RunOpenCode\Component\Query\Replica;
 
-use RunOpenCode\Component\Query\Contract\Executor\OptionsInterface;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
-use RunOpenCode\Component\Query\Contract\Middleware\ContextInterface;
-use RunOpenCode\Component\Query\Contract\Middleware\MiddlewareInterface;
+use RunOpenCode\Component\Query\Contract\Context\QueryContextInterface;
+use RunOpenCode\Component\Query\Contract\Middleware\QueryMiddlewareInterface;
+use RunOpenCode\Component\Query\Exception\Catcher;
 use RunOpenCode\Component\Query\Exception\ConnectionException;
 use RunOpenCode\Component\Query\Exception\DeadlockException;
 use RunOpenCode\Component\Query\Exception\IsolationException;
@@ -17,16 +17,19 @@ use RunOpenCode\Component\Query\Executor\AdapterRegistry;
 /**
  * Replica middleware supports using database replica for executing queries.
  */
-final readonly class ReplicaMiddleware implements MiddlewareInterface
+final readonly class ReplicaMiddleware implements QueryMiddlewareInterface
 {
+    private Catcher $catcher;
+
     /**
      * Create new instance of replica middleware.
      *
-     * @param non-empty-string                 $primary  Primary connection name for which replicas can be used.
-     * @param non-empty-list<non-empty-string> $replicas Adapter connection names of database replicas.
-     * @param AdapterRegistry                  $adapters Registered connection adapters.
-     * @param FallbackStrategy                 $fallback Default fallback strategy to use, if none provided with configuration.
-     * @param bool                             $disabled Flag denoting if replicas are disabled (useful for development/testing environment).
+     * @param non-empty-string                    $primary  Primary connection name for which replicas can be used.
+     * @param non-empty-list<non-empty-string>    $replicas Adapter connection names of database replicas.
+     * @param AdapterRegistry                     $adapters Registered adapters.
+     * @param FallbackStrategy                    $fallback Default fallback strategy to use, if none provided with configuration.
+     * @param bool                                $disabled Flag denoting if replicas are disabled (useful for development/testing environment).
+     * @param list<class-string<\Exception>>|null $catch    Exceptions on which replica should fallback to other connections. If not provided, defaults will be used.
      */
     public function __construct(
         private string           $primary,
@@ -34,17 +37,24 @@ final readonly class ReplicaMiddleware implements MiddlewareInterface
         private AdapterRegistry  $adapters,
         private FallbackStrategy $fallback = FallbackStrategy::Primary,
         private bool             $disabled = false,
+        ?array                   $catch = null,
     ) {
         \assert(!\in_array($this->primary, $this->replicas, true), new LogicException(\sprintf(
             'Primary connection "%s" is configured as replica connection.',
             $this->primary,
         )));
+
+        $this->catcher = new Catcher(!empty($catch) ? $catch : [
+            DeadlockException::class,
+            ConnectionException::class,
+            IsolationException::class,
+        ]);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function query(string $query, ContextInterface $context, callable $next): ResultInterface
+    public function query(string $query, QueryContextInterface $context, callable $next): ResultInterface
     {
         $configuration = $context->peak(Replica::class);
 
@@ -52,10 +62,9 @@ final readonly class ReplicaMiddleware implements MiddlewareInterface
             return $next($query, $context);
         }
 
-        $options    = $context->peak(OptionsInterface::class);
-        $primary    = $this->adapters->get($configuration->connection);
+        $connection = $configuration->connection ?? $this->adapters->default;
 
-        if ($primary !== $this->adapters->get($options?->connection)) {
+        if ($connection !== $context->execution->connection) {
             return $next($query, $context);
         }
 
@@ -67,44 +76,25 @@ final readonly class ReplicaMiddleware implements MiddlewareInterface
         }
 
         $connections = $this->connections($configuration);
-        $exception   = null;
+        $first       = null;
+        $catcher     = $configuration->catch ? new Catcher($configuration->catch) : $this->catcher;
 
         foreach ($connections as $current) {
-            // Fork context.
-            $fork = null !== $options ? $context->replace(
-                $options,
-                $options->withConnection($current)
-            ) : $context->append(
-                // @phpstan-ignore-next-line
-                $primary->defaults(OptionsInterface::class)->withConnection($current)
-            );
-
             try {
+                $fork = $context->withExecution(
+                    $context
+                        ->execution
+                        ->withConnection($current)
+                );
+
                 return $next($query, $fork);
-            } catch (ConnectionException|DeadlockException|IsolationException $e) {
-                // Store first exception to throw if everything fails.
-                $exception = $exception ?? $e;
+            } catch (\Exception $exception) {
+                $caught = $catcher->catch($exception);
+                $first  = $first ?? $caught;
             }
         }
 
-        throw $exception;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function statement(string $statement, ContextInterface $context, callable $next): int
-    {
-        $configuration = $context->require(Replica::class);
-
-        if (null === $configuration) {
-            return $next($statement, $context);
-        }
-
-        throw new LogicException(\sprintf(
-            'Replica must not be used for executing statement "%s", only queries.',
-            $statement,
-        ));
+        throw $first;
     }
 
     /**

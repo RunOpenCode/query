@@ -12,10 +12,10 @@ use RunOpenCode\Component\Query\Cache\Invalidate;
 final class InvalidateTest extends TestCase
 {
     /**
-     * @param string[]|string|null $keys
-     * @param string[]|string|null $tags
-     * @param list<string>         $expectedKeys
-     * @param list<string>         $expectedTags
+     * @param non-empty-string[]|non-empty-string|null $keys
+     * @param non-empty-string[]|non-empty-string|null $tags
+     * @param list<non-empty-string>                   $expectedKeys
+     * @param list<non-empty-string>                   $expectedTags
      */
     #[Test]
     #[DataProvider('get_data_for_sanitizes_input')]
@@ -29,10 +29,10 @@ final class InvalidateTest extends TestCase
 
     /**
      * @return iterable<string, array{
-     *     string[]|string|null,
-     *     string[]|string|null,
-     *     list<string>,
-     *     list<string>,
+     *     non-empty-string[]|non-empty-string|null,
+     *     non-empty-string[]|non-empty-string|null,
+     *     list<non-empty-string>,
+     *     list<non-empty-string>,
      * }>
      */
     public static function get_data_for_sanitizes_input(): iterable

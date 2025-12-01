@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace RunOpenCode\Component\Query\Contract\Executor;
 
-use RunOpenCode\Component\Query\Contract\Cache\CacheableResultInterface;
 use RunOpenCode\Component\Query\Exception\DriverException;
 use RunOpenCode\Component\Query\Exception\InvalidArgumentException;
 use RunOpenCode\Component\Query\Exception\NonUniqueResultException;
@@ -12,16 +11,16 @@ use RunOpenCode\Component\Query\Exception\NoResultException;
 use RunOpenCode\Component\Query\Exception\RuntimeException;
 
 /**
- * Execution result.
+ * Query execution result.
  *
  * Holds the records of query execution
  *
  * Concrete implementations may vary depending on the underlying data source.
  * Implementations must be traversable and countable.
  *
- * Ideally, implementation should support lazy iteration to efficiently handle large datasets.
- *
- * If result can be cached, it must implement {@see CacheableResultInterface}.
+ * Ideally, implementation should support lazy iteration to efficiently handle
+ * large datasets. In order for caching to be supported, implementation must
+ * be serializable.
  *
  * @extends \Traversable<array-key, mixed>
  */

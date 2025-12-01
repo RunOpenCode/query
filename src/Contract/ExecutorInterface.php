@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace RunOpenCode\Component\Query\Contract;
 
 use Doctrine\DBAL\Exception\SyntaxErrorException;
+use RunOpenCode\Component\Query\Contract\Executor\AffectedInterface;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
-use RunOpenCode\Component\Query\Contract\Executor\TransactionInterface;
+use RunOpenCode\Component\Query\Contract\Configuration\TransactionInterface;
 use RunOpenCode\Component\Query\Exception\ConnectionException;
 use RunOpenCode\Component\Query\Exception\DeadlockException;
 use RunOpenCode\Component\Query\Exception\DriverException;
@@ -47,7 +48,7 @@ interface ExecutorInterface
      * @param non-empty-string $statement        Statement to execute.
      * @param object           ...$configuration Configuration objects for middlewares.
      *
-     * @return int Number of affected records.
+     * @return AffectedInterface Report about affected database objects.
      *
      * @throws ConnectionException If there is a connection problem while executing statement.
      * @throws SyntaxErrorException If provided statement has syntax errors, or if syntax error is detected during statement parsing phase using configured language.
@@ -57,16 +58,16 @@ interface ExecutorInterface
      * @throws InvalidArgumentException If middleware configuration is invalid.
      * @throws LogicException If there is a problem with execution logic and requires either reconfiguration or refactoring.
      */
-    public function statement(string $statement, object ...$configuration): int;
+    public function statement(string $statement, object ...$configuration): AffectedInterface;
 
     /**
      * Execute queries and statements inside transactional scope.
      *
      * @template T
      *
-     * @param callable(ExecutorInterface): T $transactional  Function to be executed inside transactional scope.
-     * @param TransactionInterface           ...$transaction Transaction configuration, denoting which connections should create
-     *                                                       transactional scope. If none provided, default will be used.
+     * @param callable(ExecutorInterface): T $function         Function to be executed inside transactional scope.
+     * @param object                         ...$configuration Transaction configurations, which may be instance of {@see \RunOpenCode\Component\Query\Contract\Configuration\TransactionInterface} to configure for which
+     *                                                         connection transaction scope should be created or middleware configuration objects.
      *
      * @return T
      *
@@ -79,5 +80,5 @@ interface ExecutorInterface
      * @throws LogicException If there is a problem with execution logic and requires either reconfiguration or refactoring.
      * @throws UnsupportedException If used adapter do not supports transactions.
      */
-    public function transactional(callable $transactional, TransactionInterface ...$transaction): mixed;
+    public function transactional(callable $function, object ...$configuration): mixed;
 }

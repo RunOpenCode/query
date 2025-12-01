@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace RunOpenCode\Component\Query\Contract\Executor;
 
+use RunOpenCode\Component\Query\Contract\Configuration\ExecutionInterface;
+use RunOpenCode\Component\Query\Contract\Configuration\TransactionInterface;
 use RunOpenCode\Component\Query\Exception\ConnectionException;
+use RunOpenCode\Component\Query\Exception\DeadlockException;
 use RunOpenCode\Component\Query\Exception\DriverException;
+use RunOpenCode\Component\Query\Exception\DriverSyntaxException;
+use RunOpenCode\Component\Query\Exception\LockWaitTimeoutException;
 use RunOpenCode\Component\Query\Exception\RuntimeException;
-use RunOpenCode\Component\Query\Exception\SyntaxException;
 use RunOpenCode\Component\Query\Exception\TransactionException;
 
 /**
@@ -23,19 +27,17 @@ use RunOpenCode\Component\Query\Exception\TransactionException;
  * - Value object which configures query and/or statement execution within transactional scope.
  *
  * @template TTransaction of TransactionInterface = TransactionInterface
- * @template TOptions of OptionsInterface = OptionsInterface
+ * @template TConfiguration of ExecutionInterface = ExecutionInterface
  * @template TResult of ResultInterface = ResultInterface
  */
 interface AdapterInterface
 {
     /**
-     * Adapter name.
+     * Adapter's connection name.
      *
-     * Adapter name represents unique identifier of the adapter. In practice,
-     * it is the same name as the connection name used to establish connection
-     * to data source.
-     *
-     * Each registered adapter within executor must have unique name.
+     * Adapter's connection name represents unique identifier of the
+     * adapter. Each registered adapter within executor must have unique
+     * connection name.
      *
      * @var non-empty-string
      */
@@ -46,13 +48,13 @@ interface AdapterInterface
     /**
      * Create default configuration objects for the adapter.
      *
-     * If middlewares depend on adapter configurations, and configurations
-     * adapter should provide default configuration which will be used during
-     * execution process.
+     * If adapter options or transaction options are not passed to the executor,
+     * defaults ought to be used. Executor must be able to get defaults from the
+     * adapter itself.
      *
-     * @param class-string<TransactionInterface|OptionsInterface> $class Type of requested default configuration.
+     * @param class-string<TransactionInterface|ExecutionInterface> $class Type of requested default configuration.
      *
-     * @return ($class is class-string<TransactionInterface> ? TTransaction : TOptions)
+     * @return ($class is class-string<TransactionInterface> ? TTransaction : TConfiguration)
      */
     public function defaults(string $class): object;
 
@@ -61,7 +63,7 @@ interface AdapterInterface
      *
      * Start transaction using adapter's connection, according to the given configuration.
      *
-     * @param TTransaction $transaction Optional transaction configuration to use.
+     * @param TTransaction $transaction Transaction configuration to use.
      *
      * @throws ConnectionException If connection to data source could not be established.
      * @throws TransactionException If transaction error occurred.
@@ -83,46 +85,54 @@ interface AdapterInterface
     /**
      * Rollback current transaction.
      *
+     * @param \Throwable|null $exception Exception which was thrown during the execution. If exception was caused by some other
+     *                                   adapter in distributed transaction, or for any other reason unrelated to execution,
+     *                                   NULL is provided.
+     *
      * @throws ConnectionException If connection to data source could not be established.
      * @throws TransactionException If transaction error occurred.
      * @throws DriverException If execution fails.
      * @throws RuntimeException If unknown error occurred.
      */
-    public function rollback(): void;
+    public function rollback(?\Throwable $exception): void;
 
     /**
-     * Execute selection query.
+     * Execute query.
      *
-     * This query is expected to return collection of records.
+     * This method is expected to return collection of records.
      *
-     * @param non-empty-string         $query      Query to execute.
-     * @param TOptions                 $options    Executor options.
-     * @param ParametersInterface|null $parameters Optional parameters for query.
+     * @param non-empty-string         $query         Query to execute.
+     * @param TConfiguration           $configuration Executor configuration.
+     * @param ParametersInterface|null $parameters    Optional parameters for query.
      *
      * @return TResult Result of execution.
      *
      * @throws ConnectionException If connection to data source could not be established.
      * @throws DriverException If execution fails.
-     * @throws SyntaxException If provided query has syntax errors.
+     * @throws DeadlockException If deadlock error occurred.
+     * @throws LockWaitTimeoutException If lock wait timeout error occurred.
+     * @throws DriverSyntaxException If provided query has syntax errors.
      * @throws RuntimeException If unknown error occurred.
      */
-    public function query(string $query, OptionsInterface $options, ?ParametersInterface $parameters = null): ResultInterface;
+    public function query(string $query, ExecutionInterface $configuration, ?ParametersInterface $parameters = null): ResultInterface;
 
     /**
-     * Execute statement query.
+     * Execute statement.
      *
-     * This query is expected to perform data manipulation and return number of affected records.
+     * This method is expected to perform data manipulation and return report about affected database objects.
      *
-     * @param non-empty-string         $query      Query to execute.
-     * @param TOptions                 $options    Executor options.
-     * @param ParametersInterface|null $parameters Optional parameters for query.
+     * @param non-empty-string         $query         Query to execute.
+     * @param TConfiguration           $configuration Executor configuration.
+     * @param ParametersInterface|null $parameters    Optional parameters for query.
      *
-     * @return int Number of affected records.
+     * @return AffectedInterface Report about affected database objects.
      *
      * @throws ConnectionException If connection to data source could not be established.
      * @throws DriverException If execution fails.
-     * @throws SyntaxException If provided query has syntax errors.
+     * @throws DeadlockException If deadlock error occurred.
+     * @throws LockWaitTimeoutException If lock wait timeout error occurred.
+     * @throws DriverSyntaxException If provided query has syntax errors.
      * @throws RuntimeException If unknown error occurred.
      */
-    public function statement(string $query, OptionsInterface $options, ?ParametersInterface $parameters = null): int;
+    public function statement(string $query, ExecutionInterface $configuration, ?ParametersInterface $parameters = null): AffectedInterface;
 }
