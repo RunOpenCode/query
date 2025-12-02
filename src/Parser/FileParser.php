@@ -68,13 +68,10 @@ final class FileParser implements ParserInterface
      */
     public function supports(string $source): bool
     {
-        return
-            \array_any(
-                $this->patterns,
-                static fn($pattern): bool => 1 === \Safe\preg_match($pattern, $source)
-            )
-            &&
-            null !== $this->path($source);
+        return \array_any(
+            $this->patterns,
+            static fn($pattern): bool => 1 === \Safe\preg_match($pattern, $source)
+        );
     }
 
     /**

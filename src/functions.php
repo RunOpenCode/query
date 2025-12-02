@@ -42,7 +42,7 @@ function is_regex(string $str): bool
 {
     $availableModifiers = 'imsxuADUn';
 
-    if (preg_match('/^(.{3,}?)[' . $availableModifiers . ']*$/', $str, $m)) {
+    if (\preg_match('/^(.{3,}?)[' . $availableModifiers . ']*$/', $str, $m)) {
         $start = \substr($m[1], 0, 1);
         $end   = \substr($m[1], -1);
 
@@ -62,9 +62,9 @@ function is_regex(string $str): bool
 
 /**
  * Converts glob expression to regex.
- * 
+ *
  * If regex is provided, it will return same value.
- * 
+ *
  * @param non-empty-string $str Glob or regex expression.
  *
  * @return non-empty-string Regex.

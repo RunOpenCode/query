@@ -40,7 +40,7 @@ final class TwigParser implements ParserInterface
 
     /**
      * Create Twig parser.
-     * 
+     *
      * @param Environment            $twig Twig environment to use.
      * @param list<non-empty-string> $patterns File patterns to support.
      */
@@ -58,14 +58,10 @@ final class TwigParser implements ParserInterface
     {
         [$template,] = $this->template($source);
 
-        if (!\array_any(
+        return \array_any(
             $this->patterns,
             static fn($pattern): bool => 1 === \Safe\preg_match($pattern, $template)
-        )) {
-            return false;
-        }
-
-        return $this->twig->getLoader()->exists($template);
+        );
     }
 
     /**
@@ -78,7 +74,7 @@ final class TwigParser implements ParserInterface
             $source,
             self::class
         )));
-        
+
         [$template, $block] = $this->template($source);
         $context = \iterator_to_array($variables);
 

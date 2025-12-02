@@ -75,7 +75,7 @@ final class TwigParserTest extends TestCase
     {
         $this->expectException(NotExistsException::class);
 
-        $this->parser->parse('foo', Variables::twig());
+        $this->parser->parse('foo.twig', Variables::twig());
     }
 
     #[Test]

@@ -1,0 +1,6 @@
+{
+    "symbol-whitelist" : ["is_regex"],
+    "scan-files": [
+        "vendor/thecodingmachine/safe/generated/8.4/pcre.php"
+    ]
+}
