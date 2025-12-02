@@ -10,6 +10,7 @@ use RunOpenCode\Component\Query\Exception\InvalidArgumentException;
 use RunOpenCode\Component\Query\Exception\NotExistsException;
 use RunOpenCode\Component\Query\Exception\RuntimeException;
 use RunOpenCode\Component\Query\Exception\UnsupportedException;
+use Twig\Loader\FilesystemLoader;
 
 /**
  * File query parser.
@@ -23,7 +24,7 @@ final class FileParser implements ParserInterface
 {
     public const string NAME = 'file';
 
-    private const string MAIN_NAMESPACE = '__main__';
+    public const string MAIN_NAMESPACE = FilesystemLoader::MAIN_NAMESPACE;
 
     /**
      * {@inheritdoc}
@@ -35,24 +36,31 @@ final class FileParser implements ParserInterface
     /**
      * List of paths, indexed by namespace.
      *
-     * @var array<non-empty-string, list<non-empty-string>>
+     * @var array<non-empty-string, non-empty-list<non-empty-string>>
      */
-    private array $paths = [];
+    private readonly array $paths;
 
     /**
      * @param array<non-empty-string, non-empty-string> $paths
+     * @param non-empty-list<non-empty-string>          $patterns
      */
-    public function __construct(array $paths = [])
-    {
+    public function __construct(
+        array                  $paths = [],
+        private readonly array $patterns = ['/^.*\.sql$/', '/^.*\.dql$/']
+    ) {
+        $resolved = [];
+
         foreach ($paths as $path => $namespace) {
             if (\is_numeric($path)) {
                 $path      = $namespace;
                 $namespace = self::MAIN_NAMESPACE;
             }
 
-            $this->paths[$namespace]   = $this->paths[$namespace] ?? [];
-            $this->paths[$namespace][] = \rtrim($path, '/'); // @phpstan-ignore-line
+            $resolved[$namespace]   = $resolved[$namespace] ?? [];
+            $resolved[$namespace][] = \rtrim($path, '/');
         }
+
+        $this->paths = $resolved; // @phpstan-ignore-line
     }
 
     /**
@@ -60,7 +68,13 @@ final class FileParser implements ParserInterface
      */
     public function supports(string $source): bool
     {
-        return null !== $this->path($source);
+        return
+            \array_any(
+                $this->patterns,
+                static fn($pattern): bool => 1 === \Safe\preg_match($pattern, $source)
+            )
+            &&
+            null !== $this->path($source);
     }
 
     /**
@@ -68,6 +82,12 @@ final class FileParser implements ParserInterface
      */
     public function parse(string $source, VariablesInterface $variables): string
     {
+        \assert($this->supports($source), new InvalidArgumentException(\sprintf(
+            'Provided file "%s" is not supported by "%s".',
+            $source,
+            self::class
+        )));
+
         if ($variables instanceof ContextAwareVariables && ($variables->variables?->count() ?? 0) > 0) {
             throw new UnsupportedException(\sprintf(
                 'File parser can not utilize variables, number of variables provided: %d.',

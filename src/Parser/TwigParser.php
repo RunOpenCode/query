@@ -6,6 +6,7 @@ namespace RunOpenCode\Component\Query\Parser;
 
 use RunOpenCode\Component\Query\Contract\Parser\ParserInterface;
 use RunOpenCode\Component\Query\Contract\Parser\VariablesInterface;
+use RunOpenCode\Component\Query\Exception\InvalidArgumentException;
 use RunOpenCode\Component\Query\Exception\NotExistsException;
 use RunOpenCode\Component\Query\Exception\ParserSyntaxException;
 use RunOpenCode\Component\Query\Exception\RuntimeException;
@@ -37,8 +38,15 @@ final class TwigParser implements ParserInterface
         get => self::NAME;
     }
 
+    /**
+     * Create Twig parser.
+     * 
+     * @param Environment            $twig Twig environment to use.
+     * @param list<non-empty-string> $patterns File patterns to support.
+     */
     public function __construct(
-        private readonly Environment $twig
+        private readonly Environment $twig,
+        private readonly array       $patterns = ['/^.*\.twig$/'],
     ) {
         // noop
     }
@@ -50,6 +58,13 @@ final class TwigParser implements ParserInterface
     {
         [$template,] = $this->template($source);
 
+        if (!\array_any(
+            $this->patterns,
+            static fn($pattern): bool => 1 === \Safe\preg_match($pattern, $template)
+        )) {
+            return false;
+        }
+
         return $this->twig->getLoader()->exists($template);
     }
 
@@ -58,6 +73,12 @@ final class TwigParser implements ParserInterface
      */
     public function parse(string $source, VariablesInterface $variables): string
     {
+        \assert($this->supports($source), new InvalidArgumentException(\sprintf(
+            'Provided file "%s" is not supported by "%s".',
+            $source,
+            self::class
+        )));
+        
         [$template, $block] = $this->template($source);
         $context = \iterator_to_array($variables);
 
