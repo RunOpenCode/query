@@ -26,36 +26,6 @@
             "src/functions.php"
         ]
     },
-    "repositories": [
-        {
-            "type": "path",
-            "url": "../../Component/Dataset",
-            "options": {
-                "symlink": false
-            }
-        },
-        {
-            "type": "path",
-            "url": "../../Component/Metadata",
-            "options": {
-                "symlink": false
-            }
-        },
-        {
-            "type": "path",
-            "url": "../../Bundle/MetadataBundle",
-            "options": {
-                "symlink": false
-            }
-        },
-        {
-            "type": "path",
-            "url": "../../Bundle/QueryBundle",
-            "options": {
-                "symlink": false
-            }
-        }
-    ],
-    "version": "0.2",
+    "version": "0.1.26",
     "minimum-stability": "dev"
 }

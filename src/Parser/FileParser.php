@@ -41,8 +41,8 @@ final class FileParser implements ParserInterface
     private readonly array $paths;
 
     /**
-     * @param array<non-empty-string, non-empty-string> $paths
-     * @param non-empty-list<non-empty-string>          $patterns
+     * @param list<array{non-empty-string, non-empty-string}> $paths
+     * @param non-empty-list<non-empty-string>                $patterns
      */
     public function __construct(
         array                  $paths = [],
@@ -50,12 +50,7 @@ final class FileParser implements ParserInterface
     ) {
         $resolved = [];
 
-        foreach ($paths as $path => $namespace) {
-            if (\is_numeric($path)) {
-                $path      = $namespace;
-                $namespace = self::MAIN_NAMESPACE;
-            }
-
+        foreach ($paths as [$path, $namespace]) {
             $resolved[$namespace]   = $resolved[$namespace] ?? [];
             $resolved[$namespace][] = \rtrim($path, '/');
         }
