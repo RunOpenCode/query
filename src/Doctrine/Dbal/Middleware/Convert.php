@@ -39,7 +39,7 @@ final class Convert implements \IteratorAggregate, \Countable
 
     /**
      * Get defined converter.
-     * 
+     *
      * @param non-empty-string $name Column name.
      */
     public function get(string $name): string|callable
@@ -50,7 +50,7 @@ final class Convert implements \IteratorAggregate, \Countable
                 $name
             ));
         }
-        
+
         return $this->columns[$name];
     }
 
@@ -259,8 +259,6 @@ final class Convert implements \IteratorAggregate, \Countable
      * Set integer column.
      *
      * @param non-empty-string $name Column name.
-     *
-     * @return self
      */
     public function integer(string $name): self
     {
@@ -342,8 +340,6 @@ final class Convert implements \IteratorAggregate, \Countable
      *
      * @param non-empty-string        $name    Column name.
      * @param class-string<\UnitEnum> ...$enum Enum type. If multiple provided, first matching will be used.
-     *
-     * @return self
      */
     public function enum(string $name, string ...$enum): self
     {

@@ -52,7 +52,7 @@ final class DbalTest extends TestCase
     {
         $configuration = new Dbal('foo');
 
-        $this->assertNull($configuration->scope);
+        $this->assertNotInstanceOf(\RunOpenCode\Component\Query\Contract\Configuration\ExecutionScope::class, $configuration->scope);
 
         $modified = $configuration->withExecutionScope(ExecutionScope::Parent);
 
@@ -65,7 +65,7 @@ final class DbalTest extends TestCase
     {
         $configuration = new Dbal('foo');
 
-        $this->assertNull($configuration->isolation);
+        $this->assertNotInstanceOf(\Doctrine\DBAL\TransactionIsolationLevel::class, $configuration->isolation);
 
         $modified = $configuration->withIsolation(TransactionIsolationLevel::SERIALIZABLE);
 

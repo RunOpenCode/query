@@ -32,8 +32,6 @@ final readonly class MiddlewaresConfiguration implements MiddlewaresConfiguratio
      * Initialize registry of configurations for middlewares.
      *
      * @param object ...$configurations List of configuration objects for middlewares.
-     *
-     * @return self
      */
     public static function create(object ...$configurations): self
     {
@@ -145,8 +143,6 @@ final readonly class MiddlewaresConfiguration implements MiddlewaresConfiguratio
      * Check if configuration has been used by middleware.
      *
      * @param object|class-string $configuration Configuration to check.
-     *
-     * @return bool
      */
     public function used(object|string $configuration): bool
     {
@@ -195,8 +191,6 @@ final readonly class MiddlewaresConfiguration implements MiddlewaresConfiguratio
      * Sync usage flags of this instance with other instance.
      *
      * @param MiddlewaresConfiguration $other Other instance with usage flags.
-     *
-     * @return void
      */
     public function sync(self $other): void
     {

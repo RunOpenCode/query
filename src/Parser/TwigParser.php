@@ -60,7 +60,7 @@ final class TwigParser implements ParserInterface
 
         return \array_any(
             $this->patterns,
-            static fn($pattern): bool => 1 === \Safe\preg_match($pattern, $template)
+            static fn(string $pattern): bool => 1 === \Safe\preg_match($pattern, $template)
         );
     }
 
@@ -123,7 +123,6 @@ final class TwigParser implements ParserInterface
     /**
      * Splits given query into template name and optional block name.
      *
-     * @param string $source
      *
      * @return array{string, ?string}
      */

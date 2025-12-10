@@ -9,10 +9,11 @@ use RunOpenCode\Component\Dataset\Reducer\Callback;
 use RunOpenCode\Component\Dataset\Stream;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
 use RunOpenCode\Component\Query\Doctrine\Dbal\Dataset\ArrayDataset;
-use RunOpenCode\Component\Query\Exception\InvalidArgumentException;
 use RunOpenCode\Component\Query\Exception\NonUniqueResultException;
 use RunOpenCode\Component\Query\Exception\NoResultException;
-use RunOpenCode\Component\Query\Exception\ResultClosedException;
+
+use function RunOpenCode\Component\Query\assert_default_value;
+use function RunOpenCode\Component\Query\assert_result_open;
 
 /**
  * Doctrine Dbal result set.
@@ -33,7 +34,7 @@ final class Result implements \IteratorAggregate, ResultInterface
     /**
      * {@inheritdoc}
      */
-    public private(set) bool $closed;
+    public private(set) bool $closed = false;
 
     /**
      * Create new result set from data set retrieved by Doctrine Dbal.
@@ -44,7 +45,6 @@ final class Result implements \IteratorAggregate, ResultInterface
         private DatasetInterface $dataset,
     ) {
         $this->connection = $this->dataset->connection;
-        $this->closed     = false;
     }
 
     /**
@@ -52,8 +52,8 @@ final class Result implements \IteratorAggregate, ResultInterface
      */
     public function scalar(mixed ...$default): mixed
     {
-        $this->assertNotClosed();
-        $this->assertDefaultValue(...$default);
+        assert_result_open($this);
+        assert_default_value(...$default);
 
         try {
             return Stream::create($this->dataset->vector())
@@ -71,13 +71,13 @@ final class Result implements \IteratorAggregate, ResultInterface
      */
     public function vector(mixed ...$default): mixed
     {
-        $this->assertNotClosed();
-        $this->assertDefaultValue(...$default);
+        assert_result_open($this);
+        assert_default_value(...$default);
 
         try {
             $value = Stream::create($this->dataset->vector())->collect(ListCollector::class)->value;
-            
-            return 0 === \count($value) &&  \array_key_exists(0, $default) ? $default[0] : $value;
+
+            return 0 === \count($value) && \array_key_exists(0, $default) ? $default[0] : $value;
         } finally {
             $this->free();
         }
@@ -88,8 +88,8 @@ final class Result implements \IteratorAggregate, ResultInterface
      */
     public function record(mixed ...$default): mixed
     {
-        $this->assertNotClosed();
-        $this->assertDefaultValue(...$default);
+        assert_result_open($this);
+        assert_default_value(...$default);
 
         try {
             return Stream::create($this->dataset)
@@ -115,10 +115,10 @@ final class Result implements \IteratorAggregate, ResultInterface
      */
     public function free(): void
     {
-        if (!isset($this->dataset)) { 
+        if (!isset($this->dataset)) {
             return;
         }
-        
+
         try {
             $this->dataset->free();
         } catch (\Exception) {
@@ -135,7 +135,7 @@ final class Result implements \IteratorAggregate, ResultInterface
      */
     public function getIterator(): \Traversable
     {
-        $this->assertNotClosed();
+        assert_result_open($this);
 
         try {
             yield from $this->dataset;
@@ -146,7 +146,7 @@ final class Result implements \IteratorAggregate, ResultInterface
 
     public function __sleep(): array
     {
-        $this->assertNotClosed();
+        assert_result_open($this);
 
         $cacheable = new ArrayDataset(
             $this->connection,
@@ -158,42 +158,5 @@ final class Result implements \IteratorAggregate, ResultInterface
         $this->dataset = $cacheable;
 
         return ['connection', 'closed', 'dataset'];
-    }
-
-    /**
-     * Assert that result set is not closed.
-     */
-    private function assertNotClosed(): void
-    {
-        if (!$this->closed) {
-            return;
-        }
-
-        throw new ResultClosedException(\sprintf(
-            'Can not call method "%s" on closed result set.',
-            \debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS)[1]['function']
-        ));
-    }
-
-    /**
-     * Assert that at most one default value is provided.
-     */
-    private function assertDefaultValue(mixed ...$default): void
-    {
-        if (\count($default) > 1) {
-            throw new InvalidArgumentException(\sprintf(
-                'Expected at most one default value when invoking method "%s" of result set, %d given.',
-                \debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS)[1]['function'],
-                \count($default),
-            ));
-        }
-
-        if (!\array_is_list($default)) {
-            throw new InvalidArgumentException(\sprintf(
-                'Expected default value to be provided without naming argument when invoking method "%s" of result set, "%s" given.',
-                \debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS)[1]['function'],
-                \array_keys($default)[0],
-            ));
-        }
     }
 }

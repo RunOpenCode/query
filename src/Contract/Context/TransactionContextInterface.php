@@ -30,7 +30,7 @@ interface TransactionContextInterface extends \IteratorAggregate, ContextInterfa
      * @param ExecutionInterface|non-empty-string $connection Execution configuration or connection which will be used for execution of query or statement.
      */
     public function accepts(ExecutionScope $scope, ExecutionInterface|string $connection): bool;
-    
+
     /**
      * Append additional transaction configuration to context.
      *

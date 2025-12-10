@@ -92,7 +92,7 @@ final class TransactionExecutor implements ExecutorInterface
                 }
             }
 
-            throw empty($trace) ? $exception : new TransactionScopeRollbackException(\sprintf(
+            throw $trace === [] ? $exception : new TransactionScopeRollbackException(\sprintf(
                 'Unable to rollback transaction for connections: "%s".',
                 \implode('", "', \array_keys($trace))
             ), $exception, ...\array_values($trace));

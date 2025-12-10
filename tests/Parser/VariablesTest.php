@@ -139,17 +139,17 @@ final class VariablesTest extends TestCase
     {
         $bag = Variables::default(['foo' => 'bar']);
 
-        $this->assertTrue(isset($bag['foo']));
+        $this->assertArrayHasKey('foo', $bag);
         $this->assertSame('bar', $bag['foo']);
 
         $bag['baz'] = 'qux';
 
-        $this->assertTrue(isset($bag['baz']));
+        $this->assertArrayHasKey('baz', $bag);
         $this->assertSame('qux', $bag['baz']);
 
         unset($bag['baz']);
 
-        $this->assertFalse(isset($bag['baz']));
+        $this->assertArrayNotHasKey('baz', $bag);
     }
 
     #[Test]

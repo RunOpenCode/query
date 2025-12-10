@@ -54,8 +54,6 @@ final readonly class Adapter implements AdapterInterface
 
     /**
      * Instance of transaction level isolation utility.
-     *
-     * @var Isolator
      */
     private Isolator $isolator;
 
@@ -152,7 +150,7 @@ final readonly class Adapter implements AdapterInterface
         ]);
 
         try {
-            if (null === $exception || !$cacher->catchable($exception, true)) {
+            if (!$exception instanceof \Throwable || !$cacher->catchable($exception, true)) {
                 $this->connection->rollBack();
             }
         } catch (GenericDbalConnectionException|DbalConnectionException $exception) {
@@ -223,7 +221,7 @@ final readonly class Adapter implements AdapterInterface
      */
     private function execute(string $query, Dbal $options, callable $invocation): ResultInterface|AffectedInterface
     {
-        $isolate = null !== $options->isolation && $options->isolation !== $this->isolator->get();
+        $isolate = $options->isolation instanceof \Doctrine\DBAL\TransactionIsolationLevel && $options->isolation !== $this->isolator->get();
 
         $this->isolator->isolate($options->isolation);
 

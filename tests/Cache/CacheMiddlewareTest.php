@@ -181,7 +181,7 @@ final class CacheMiddlewareTest extends TestCase
     {
         // We will not use mock from setup.
         $this->cache->expects($this->never())->method($this->anything());
-        
+
         $cache      = $this->createMock(TagAwareAdapterInterface::class);
         $middleware = new CacheMiddleware($cache);
 
@@ -197,7 +197,7 @@ final class CacheMiddlewareTest extends TestCase
     public function throws_exception_if_cache_tags_are_not_supported(): void
     {
         $this->expectException(UnsupportedException::class);
-        
+
         // We will not use mock from setup.
         $this->cache->expects($this->never())->method($this->anything());
 

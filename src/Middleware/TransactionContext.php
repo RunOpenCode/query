@@ -60,8 +60,10 @@ final readonly class TransactionContext implements TransactionContextInterface
         if (ExecutionScope::Strict === $scope) {
             return $this->configurations->has($name);
         }
-
-        return $this->configurations->has($name) || $this->parent?->accepts($scope, $name);
+        if ($this->configurations->has($name)) {
+            return true;
+        }
+        return (bool) $this->parent?->accepts($scope, $name);
     }
 
     /**

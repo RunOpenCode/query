@@ -51,7 +51,7 @@ final readonly class CacheIdentity implements CacheIdentityInterface
         return new self($key, static function(CacheItemInterface $item) use ($tags, $ttl): void {
             $item->expiresAfter($ttl);
 
-            if (empty($tags)) {
+            if ($tags === null || $tags === []) {
                 return;
             }
 

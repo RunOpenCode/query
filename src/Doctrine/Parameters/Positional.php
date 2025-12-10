@@ -388,8 +388,6 @@ final class Positional implements ParametersInterface
      * ```
      *
      * @param ?\UnitEnum $value Parameter value.
-     *
-     * @return self
      */
     public function enum(?\UnitEnum $value): self
     {
@@ -410,8 +408,6 @@ final class Positional implements ParametersInterface
      * If you provide null value, or empty iterable, the parameter will be set to null.
      *
      * @param ?iterable<int> $value Parameter value.
-     *
-     * @return self
      */
     public function integerArray(?iterable $value): self
     {
@@ -434,8 +430,6 @@ final class Positional implements ParametersInterface
      * If you provide null value, or empty iterable, the parameter will be set to null.
      *
      * @param ?iterable<\Stringable|string> $value Parameter value.
-     *
-     * @return self
      */
     public function stringArray(?iterable $value): self
     {
@@ -461,8 +455,6 @@ final class Positional implements ParametersInterface
      * If you provide null value, or empty iterable, the parameter will be set to null.
      *
      * @param ?iterable<\Stringable|string> $value Parameter value.
-     *
-     * @return self
      */
     public function asciiArray(?iterable $value): self
     {
@@ -488,8 +480,6 @@ final class Positional implements ParametersInterface
      * If you provide null value, or empty iterable, the parameter will be set to null.
      *
      * @param ?iterable<mixed> $value Parameter value.
-     *
-     * @return self
      */
     public function binaryArray(?iterable $value): self
     {
@@ -516,8 +506,6 @@ final class Positional implements ParametersInterface
      * the parameter will be set as string array.
      *
      * @param ?iterable<\UnitEnum> $value Parameter value.
-     *
-     * @return self
      */
     public function enumArray(?iterable $value): self
     {

@@ -109,10 +109,6 @@ final class DatasetFactory
         $dataset = self::FIXTURES[$table]['datasets'][$dataset];
         $cast    = self::FIXTURES[$table]['schema']['cast'] ?? [];
 
-        if (empty($dataset)) {
-            return;
-        }
-
         foreach ($dataset as $record) {
             $keys   = \array_keys($record);
             $values = \array_map(
@@ -148,7 +144,7 @@ final class DatasetFactory
             $table->addColumn($column, $type, $options);
         }
 
-        if (!empty($primary)) {
+        if ($primary !== []) {
             $table->addPrimaryKeyConstraint(new PrimaryKeyConstraint(
                 null,
                 \array_map(static fn(string $name): UnqualifiedName => UnqualifiedName::unquoted($name), $primary),

@@ -13,7 +13,7 @@ final readonly class Affected implements AffectedInterface
 {
     /**
      * Create report about affected rows.
-     * 
+     *
      * @param non-empty-string $connection Connection which was used to mutate database objects.
      * @param non-negative-int $affected   Number of affected database objects.
      */

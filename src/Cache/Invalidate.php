@@ -43,8 +43,6 @@ final readonly class Invalidate
      * Create cache invalidation command for keys.
      *
      * @param non-empty-string|non-empty-string[] $keys Keys to invalidate
-     *
-     * @return self
      */
     public static function keys(string|array $keys): self
     {
@@ -55,8 +53,6 @@ final readonly class Invalidate
      * Create cache invalidation command for tags.
      *
      * @param non-empty-string|non-empty-string[] $tags Tags to invalidate
-     *
-     * @return self
      */
     public static function tags(string|array $tags): self
     {

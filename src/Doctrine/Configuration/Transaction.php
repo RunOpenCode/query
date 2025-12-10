@@ -109,8 +109,6 @@ final readonly class Transaction implements TransactionInterface
      * Creates new Doctrine transaction instance for connection.
      *
      * @param non-empty-string $connection Connection name.
-     *
-     * @return self
      */
     public static function connection(string $connection): self
     {

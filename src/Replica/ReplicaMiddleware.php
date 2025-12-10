@@ -44,11 +44,11 @@ final readonly class ReplicaMiddleware implements QueryMiddlewareInterface
             $this->primary,
         )));
 
-        $this->catcher = new Catcher(!empty($catch) ? $catch : [
+        $this->catcher = new Catcher($catch === null || $catch === [] ? [
             DeadlockException::class,
             ConnectionException::class,
             IsolationException::class,
-        ]);
+        ] : $catch);
     }
 
     /**

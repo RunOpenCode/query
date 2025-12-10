@@ -18,7 +18,7 @@ final class ContextAwareVariablesTest extends TestCase
     #[Test]
     public function offset_exists(): void
     {
-        $variables = new ContextAwareVariables(new QueryContext('foo', Dbal::connection('foo'), null), Variables::default([
+        $variables = new ContextAwareVariables(new QueryContext('foo', Dbal::connection('foo')), Variables::default([
             'foo' => 'bar',
         ]), null);
 
@@ -28,7 +28,7 @@ final class ContextAwareVariablesTest extends TestCase
     #[Test]
     public function offset_get(): void
     {
-        $variables = new ContextAwareVariables(new QueryContext('foo', Dbal::connection('foo'), null), Variables::default([
+        $variables = new ContextAwareVariables(new QueryContext('foo', Dbal::connection('foo')), Variables::default([
             'foo' => 'bar',
         ]), null);
 
@@ -38,7 +38,7 @@ final class ContextAwareVariablesTest extends TestCase
     #[Test]
     public function iterates_and_counts(): void
     {
-        $context   = new QueryContext('foo', Dbal::connection('foo'), null);
+        $context   = new QueryContext('foo', Dbal::connection('foo'));
         $vars      = new Variables()->add('foo', 'bar');
         $params    = new Named()->add('baz', 'qux');
         $variables = new ContextAwareVariables($context, $vars, $params);
@@ -58,7 +58,7 @@ final class ContextAwareVariablesTest extends TestCase
     {
         $this->expectException(LogicException::class);
 
-        new ContextAwareVariables(new QueryContext('foo', Dbal::connection('foo'), null), null, null)->add('foo', 'bar');
+        new ContextAwareVariables(new QueryContext('foo', Dbal::connection('foo')), null, null)->add('foo', 'bar');
     }
 
     #[Test]
@@ -66,7 +66,7 @@ final class ContextAwareVariablesTest extends TestCase
     {
         $this->expectException(LogicException::class);
 
-        new ContextAwareVariables(new QueryContext('foo', Dbal::connection('foo'), null), null, null)->set('foo', 'bar');
+        new ContextAwareVariables(new QueryContext('foo', Dbal::connection('foo')), null, null)->set('foo', 'bar');
     }
 
     #[Test]
@@ -74,7 +74,7 @@ final class ContextAwareVariablesTest extends TestCase
     {
         $this->expectException(LogicException::class);
 
-        new ContextAwareVariables(new QueryContext('foo', Dbal::connection('foo'), null), null, null)->remove('foo');
+        new ContextAwareVariables(new QueryContext('foo', Dbal::connection('foo')), null, null)->remove('foo');
     }
 
     #[Test]
@@ -82,7 +82,7 @@ final class ContextAwareVariablesTest extends TestCase
     {
         $this->expectException(LogicException::class);
 
-        new ContextAwareVariables(new QueryContext('foo', Dbal::connection('foo'), null), null, null)->merge(['foo' => 'bar']);
+        new ContextAwareVariables(new QueryContext('foo', Dbal::connection('foo')), null, null)->merge(['foo' => 'bar']);
     }
 
     #[Test]
@@ -90,7 +90,7 @@ final class ContextAwareVariablesTest extends TestCase
     {
         $this->expectException(LogicException::class);
 
-        new ContextAwareVariables(new QueryContext('foo', Dbal::connection('foo'), null), null, null)->offsetSet('foo', 'bar');
+        new ContextAwareVariables(new QueryContext('foo', Dbal::connection('foo')), null, null)->offsetSet('foo', 'bar');
     }
 
     #[Test]
@@ -98,6 +98,6 @@ final class ContextAwareVariablesTest extends TestCase
     {
         $this->expectException(LogicException::class);
 
-        new ContextAwareVariables(new QueryContext('foo', Dbal::connection('foo'), null), null, null)->offsetUnset('foo');
+        new ContextAwareVariables(new QueryContext('foo', Dbal::connection('foo')), null, null)->offsetUnset('foo');
     }
 }

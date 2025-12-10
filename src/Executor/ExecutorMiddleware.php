@@ -80,7 +80,7 @@ final readonly class ExecutorMiddleware implements QueryMiddlewareInterface, Sta
         $parameters = $context->require(ParametersInterface::class);
         $scope      = $context->execution->scope ?? ExecutionScope::Strict;
 
-        if (null !== $context->transaction && !$context->transaction->accepts($scope, $adapter->name)) {
+        if ($context->transaction instanceof \RunOpenCode\Component\Query\Contract\Context\TransactionContextInterface && !$context->transaction->accepts($scope, $adapter->name)) {
             throw new LogicException(\sprintf(
                 'Execution of %s using connection "%s" within current transaction violates current execution scope configuration "%s".',
                 $method,

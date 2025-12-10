@@ -53,11 +53,11 @@ final readonly class Catcher
      */
     public function catchable(\Throwable $exception, bool $previous = false): bool
     {
-        if (\array_any($this->catch, static fn($catch) => $exception instanceof $catch)) {
+        if (\array_any($this->catch, static fn($catch): bool => $exception instanceof $catch)) {
             return true;
         }
 
-        if (!$previous || null === $exception->getPrevious()) {
+        if (!$previous || !$exception->getPrevious() instanceof \Throwable) {
             return false;
         }
 

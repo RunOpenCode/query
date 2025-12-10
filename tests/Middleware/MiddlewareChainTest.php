@@ -64,7 +64,7 @@ final class MiddlewareChainTest extends TestCase
 
         new MiddlewareChain([$first, $second, $third, $forth, $last])->query(
             'foo',
-            new QueryContext('foo', Dbal::connection('foo'), null)
+            new QueryContext('foo', Dbal::connection('foo'))
         );
     }
 
@@ -108,7 +108,7 @@ final class MiddlewareChainTest extends TestCase
 
         new MiddlewareChain([$first, $second, $third, $forth, $last])->statement(
             'foo',
-            new StatementContext('foo', Dbal::connection('foo'), null)
+            new StatementContext('foo', Dbal::connection('foo'))
         );
     }
 

@@ -18,8 +18,6 @@ interface TransactionMiddlewareInterface
      * @param TransactionalFn             $function Function to be executed inside transactional scope.
      * @param TransactionContextInterface $context  Transaction context.
      * @param Next                        $next     Next middleware to call.
-     *
-     * @return mixed
      */
     public function transactional(callable $function, TransactionContextInterface $context, callable $next): mixed;
 }

@@ -27,8 +27,6 @@ interface MiddlewaresConfigurationInterface extends \IteratorAggregate, \Countab
      * If instance is provided, type from instance is resolved.
      *
      * @param object|class-string $type Configuration instance or type.
-     *
-     * @return bool
      */
     public function has(object|string $type): bool;
 

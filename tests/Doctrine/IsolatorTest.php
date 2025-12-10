@@ -94,11 +94,7 @@ final class IsolatorTest extends TestCase
         $this
             ->connection
             ->expects($this->exactly(2))
-            ->method('getTransactionIsolation')
-            ->willReturnOnConsecutiveCalls(
-                TransactionIsolationLevel::READ_UNCOMMITTED,
-                TransactionIsolationLevel::READ_UNCOMMITTED,
-            );
+            ->method('getTransactionIsolation')->willReturn(TransactionIsolationLevel::READ_UNCOMMITTED);
 
         $this
             ->connection

@@ -31,7 +31,7 @@ final class ConvertMiddlewareTest extends TestCase
         parent::setUp();
         $connection       = $this->createStub(Connection::class);
         $adapter          = $this->createStub(AdapterInterface::class);
-        
+
         $connection
             ->method('getDatabasePlatform')
             ->willReturn($this->createStub(AbstractPlatform::class));

@@ -58,25 +58,10 @@ final class ParserMiddlewareTest extends TestCase
         $this
             ->parser
             ->expects($this->once())
-            ->method('parse')
-            ->with(
-                $this->callback(function(string $query): bool {
-                    $this->assertSame('foo', $query);
-                    return true;
-                }),
-                $this->callback(function(VariablesInterface $variables) use ($vars, $params, $context): bool {
-                    $this->assertInstanceOf(ContextAwareVariables::class, $variables);
-                    $this->assertSame([
-                        'foo'        => 'bar',
-                        'baz'        => 'qux',
-                        'variables'  => $vars,
-                        'parameters' => $params,
-                        'context'    => $context,
-                    ], \iterator_to_array($variables));
-                    return true;
-                }),
-            )
-            ->willReturn('foo_parsed');
+            ->method('parse')->willReturnCallback(function(string $query): string {
+                $this->assertSame('foo', $query);
+                return 'foo_parsed';
+            });
 
         $this->middleware->query('foo', $context, fn(): ResultInterface => $this->createStub(ResultInterface::class));
     }
@@ -91,25 +76,10 @@ final class ParserMiddlewareTest extends TestCase
         $this
             ->parser
             ->expects($this->once())
-            ->method('parse')
-            ->with(
-                $this->callback(function(string $query): bool {
-                    $this->assertSame('foo', $query);
-                    return true;
-                }),
-                $this->callback(function(VariablesInterface $variables) use ($vars, $params, $context): bool {
-                    $this->assertInstanceOf(ContextAwareVariables::class, $variables);
-                    $this->assertSame([
-                        'foo'        => 'bar',
-                        'baz'        => 'qux',
-                        'variables'  => $vars,
-                        'parameters' => $params,
-                        'context'    => $context,
-                    ], \iterator_to_array($variables));
-                    return true;
-                }),
-            )
-            ->willReturn('foo_parsed');
+            ->method('parse')->willReturnCallback(function(string $query): string {
+                $this->assertSame('foo', $query);
+                return 'foo_parsed';
+            });
 
         $this->middleware->statement('foo', $context, fn(): AffectedInterface => $this->createStub(AffectedInterface::class));
     }

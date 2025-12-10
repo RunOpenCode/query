@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RunOpenCode\Component\Query\Doctrine\Dbal\Dataset;
 
 use Doctrine\DBAL\Exception as DbalException;
+use Doctrine\DBAL\Exception\DriverException as DbalDriverException;
 use Doctrine\DBAL\Result as DbalResult;
 use RunOpenCode\Component\Query\Doctrine\Dbal\DatasetInterface;
 use RunOpenCode\Component\Query\Exception\DriverException;
@@ -37,7 +38,7 @@ final class DbalDataset implements DatasetInterface
             while (false !== ($value = $this->result->fetchOne())) {
                 yield $value;
             }
-        } catch (DbalException $exception) {
+        } catch (DbalException|DbalDriverException $exception) {
             throw new DriverException(
                 'An error occurred while fetching first value of next row using Doctrine Dbal database driver.',
                 $exception,
@@ -72,7 +73,7 @@ final class DbalDataset implements DatasetInterface
             while (false !== ($row = $this->result->fetchAssociative())) {
                 yield $row;
             }
-        } catch (DbalException $exception) {
+        } catch (DbalException|DbalDriverException $exception) {
             throw new DriverException(
                 'An error occurred while fetching row as associative array using Doctrine Dbal database driver.',
                 $exception,

@@ -46,8 +46,6 @@ final readonly class MiddlewareChain
      *
      * @param non-empty-string      $query   Query to execute.
      * @param QueryContextInterface $context Middleware execution context.
-     *
-     * @return ResultInterface
      */
     public function query(string $query, QueryContextInterface $context): ResultInterface
     {

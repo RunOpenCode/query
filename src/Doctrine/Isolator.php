@@ -50,7 +50,7 @@ final readonly class Isolator
      */
     public function isolate(?TransactionIsolationLevel $requested): void
     {
-        if (null === $requested) {
+        if (!$requested instanceof \Doctrine\DBAL\TransactionIsolationLevel) {
             $this->isolations->push(null);
             return;
         }

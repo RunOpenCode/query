@@ -40,8 +40,5 @@ abstract class AbstractContextTestBase extends TestCase
         $context->require(\stdClass::class);
     }
 
-    /**
-     * @param object ...$configurations
-     */
     abstract protected function createContext(object ...$configurations): ContextInterface;
 }

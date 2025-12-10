@@ -60,7 +60,7 @@ final readonly class ContextAwareVariables implements VariablesInterface
         $this->parser = $variables?->parser;
         $this->bag    = \array_merge(
             $params,
-            $variables ? \iterator_to_array($variables) : [],
+            $variables instanceof \RunOpenCode\Component\Query\Contract\Parser\VariablesInterface ? \iterator_to_array($variables) : [],
             [
                 'variables'  => $variables,
                 'parameters' => $parameters,

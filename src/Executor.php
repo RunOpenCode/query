@@ -24,10 +24,6 @@ final class Executor implements ExecutorInterface
      */
     private bool $current = true;
 
-    /**
-     * @param MiddlewareChain $middlewares
-     * @param AdapterRegistry $adapters
-     */
     public function __construct(
         private readonly MiddlewareChain $middlewares,
         private readonly AdapterRegistry $adapters,

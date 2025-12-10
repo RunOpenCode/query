@@ -33,16 +33,11 @@ final class ResultTest extends TestCase
         $this->connection = $this->createSqlLiteConnection();
     }
 
-    private function execute(string $query): Result
-    {
-        return new Result(new DbalDataset('default', $this->connection->executeQuery($query)));
-    }
-
     #[Test]
     #[DataProvider('get_data_for_scalar')]
     public function scalar(string $query, mixed $expected): void
     {
-        $this->assertSame($expected, $this->execute($query)->scalar());
+        $this->assertSame($expected, $this->executeQuery($query)->scalar());
     }
 
     /**
@@ -58,7 +53,7 @@ final class ResultTest extends TestCase
     #[Test]
     public function scalar_returns_default_when_no_results(): void
     {
-        $this->assertSame(42, $this->execute('SELECT id FROM test WHERE id = -1')->scalar(42));
+        $this->assertSame(42, $this->executeQuery('SELECT id FROM test WHERE id = -1')->scalar(42));
     }
 
     #[Test]
@@ -66,7 +61,7 @@ final class ResultTest extends TestCase
     {
         $this->expectException(NoResultException::class);
 
-        $this->execute('SELECT id FROM test WHERE id = -1')->scalar();
+        $this->executeQuery('SELECT id FROM test WHERE id = -1')->scalar();
     }
 
     #[Test]
@@ -74,14 +69,14 @@ final class ResultTest extends TestCase
     {
         $this->expectException(NonUniqueResultException::class);
 
-        $this->execute('SELECT id FROM test')->scalar();
+        $this->executeQuery('SELECT id FROM test')->scalar();
     }
 
     #[Test]
     #[DataProvider('get_data_for_vector')]
     public function vector(string $query, mixed $expected): void
     {
-        $this->assertSame($expected, $this->execute($query)->vector());
+        $this->assertSame($expected, $this->executeQuery($query)->vector());
     }
 
     /**
@@ -98,19 +93,19 @@ final class ResultTest extends TestCase
     #[Test]
     public function vector_returns_default_when_no_results(): void
     {
-        $this->assertSame(['foo', 'bar'], $this->execute('SELECT id FROM test WHERE id = -1')->vector(['foo', 'bar']));
+        $this->assertSame(['foo', 'bar'], $this->executeQuery('SELECT id FROM test WHERE id = -1')->vector(['foo', 'bar']));
     }
 
     #[Test]
     public function record(): void
     {
-        $this->assertSame(['id' => 1, 'title' => 'Title 1'], $this->execute('SELECT id, title FROM test WHERE id = 1')->record());
+        $this->assertSame(['id' => 1, 'title' => 'Title 1'], $this->executeQuery('SELECT id, title FROM test WHERE id = 1')->record());
     }
 
     #[Test]
     public function record_returns_default_when_no_results(): void
     {
-        $this->assertSame(['foo', 'bar'], $this->execute('SELECT * FROM test WHERE id = -1')->record(['foo', 'bar']));
+        $this->assertSame(['foo', 'bar'], $this->executeQuery('SELECT * FROM test WHERE id = -1')->record(['foo', 'bar']));
     }
 
     #[Test]
@@ -118,7 +113,7 @@ final class ResultTest extends TestCase
     {
         $this->expectException(NoResultException::class);
 
-        $this->execute('SELECT * FROM test WHERE id = -1')->record();
+        $this->executeQuery('SELECT * FROM test WHERE id = -1')->record();
     }
 
     #[Test]
@@ -126,7 +121,7 @@ final class ResultTest extends TestCase
     {
         $this->expectException(NonUniqueResultException::class);
 
-        $this->execute('SELECT * FROM test')->record();
+        $this->executeQuery('SELECT * FROM test')->record();
     }
 
     #[Test]
@@ -144,7 +139,7 @@ final class ResultTest extends TestCase
     #[Test]
     public function iterates(): void
     {
-        $result  = $this->execute('SELECT id, title FROM test WHERE id IN (1, 2) ORDER BY id');
+        $result  = $this->executeQuery('SELECT id, title FROM test WHERE id IN (1, 2) ORDER BY id');
         $fetched = [];
 
         foreach ($result as $row) {
@@ -163,7 +158,7 @@ final class ResultTest extends TestCase
     {
         $this->expectException(ResultClosedException::class);
 
-        $result = $this->execute('SELECT id, title FROM test WHERE id IN (1, 2) ORDER BY id');
+        $result = $this->executeQuery('SELECT id, title FROM test WHERE id IN (1, 2) ORDER BY id');
 
         $result->free();
 
@@ -195,7 +190,7 @@ final class ResultTest extends TestCase
     #[Test]
     public function supports_serialization(): void
     {
-        $result     = $this->execute('SELECT id, title FROM test WHERE id IN (1, 2) ORDER BY id');
+        $result     = $this->executeQuery('SELECT id, title FROM test WHERE id IN (1, 2) ORDER BY id');
         $serialized = \serialize($result);
 
         /** @var Result $unserialized */
@@ -218,7 +213,7 @@ final class ResultTest extends TestCase
     {
         $this->expectException(ResultClosedException::class);
 
-        $result = $this->execute('SELECT * FROM test');
+        $result = $this->executeQuery('SELECT * FROM test');
 
         \iterator_to_array($result);
 
@@ -229,12 +224,12 @@ final class ResultTest extends TestCase
     public function free_ignores_exception(): void
     {
         $dataset = $this->createMock(DatasetInterface::class);
-        
+
         $dataset
             ->expects($this->once())
             ->method(PropertyHook::get('connection'))
             ->willReturn('default');
-        
+
         $dataset
             ->expects($this->once())
             ->method('free')
@@ -243,5 +238,10 @@ final class ResultTest extends TestCase
         $result = new Result($dataset);
 
         $result->free();
+    }
+
+    private function executeQuery(string $query): Result
+    {
+        return new Result(new DbalDataset('default', $this->connection->executeQuery($query)));
     }
 }

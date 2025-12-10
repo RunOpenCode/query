@@ -300,8 +300,6 @@ final class Named implements ParametersInterface
      *
      * @param non-empty-string $name  Parameter name.
      * @param int|null         $value Parameter value.
-     *
-     * @return self
      */
     public function integer(string $name, ?int $value): self
     {
@@ -410,8 +408,6 @@ final class Named implements ParametersInterface
      *
      * @param non-empty-string $name  Parameter name.
      * @param \UnitEnum|null   $value Parameter value.
-     *
-     * @return self
      */
     public function enum(string $name, ?\UnitEnum $value): self
     {
@@ -433,8 +429,6 @@ final class Named implements ParametersInterface
      *
      * @param non-empty-string   $name  Parameter name.
      * @param iterable<int>|null $value Parameter value.
-     *
-     * @return self
      */
     public function integerArray(string $name, ?iterable $value): self
     {
@@ -458,8 +452,6 @@ final class Named implements ParametersInterface
      *
      * @param non-empty-string              $name  Parameter name.
      * @param ?iterable<\Stringable|string> $value Parameter value.
-     *
-     * @return self
      */
     public function stringArray(string $name, ?iterable $value): self
     {
@@ -487,8 +479,6 @@ final class Named implements ParametersInterface
      *
      * @param non-empty-string              $name  Parameter name.
      * @param ?iterable<\Stringable|string> $value Parameter value.
-     *
-     * @return self
      */
     public function asciiArray(string $name, ?iterable $value): self
     {
@@ -516,8 +506,6 @@ final class Named implements ParametersInterface
      *
      * @param non-empty-string $name  Parameter name.
      * @param ?iterable<mixed> $value Parameter value.
-     *
-     * @return self
      */
     public function binaryArray(string $name, ?iterable $value): self
     {
@@ -545,8 +533,6 @@ final class Named implements ParametersInterface
      *
      * @param non-empty-string     $name  Parameter name.
      * @param ?iterable<\UnitEnum> $value Parameter value.
-     *
-     * @return self
      */
     public function enumArray(string $name, ?iterable $value): self
     {

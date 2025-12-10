@@ -77,11 +77,11 @@ final readonly class CacheMiddleware implements QueryMiddlewareInterface, Transa
      */
     public function invalidate(Invalidate $invalidate): void
     {
-        if (!empty($invalidate->keys)) {
+        if ($invalidate->keys !== []) {
             $this->cache->deleteItems($invalidate->keys);
         }
 
-        if (empty($invalidate->tags)) {
+        if ($invalidate->tags === []) {
             return;
         }
 

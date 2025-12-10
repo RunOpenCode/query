@@ -17,6 +17,8 @@ use RunOpenCode\Component\Query\Exception\NonUniqueResultException;
 use RunOpenCode\Component\Query\Exception\NoResultException;
 use RunOpenCode\Component\Query\Exception\ResultClosedException;
 
+use function RunOpenCode\Component\Query\assert_default_value;
+
 /**
  * Result set with converted column values according to provided conversion functions.
  *
@@ -53,10 +55,12 @@ final class Converted implements \IteratorAggregate, ResultInterface
      */
     public function scalar(...$default): mixed
     {
+        assert_default_value(...$default);
+
         return Stream::create($this->result)
                      ->take(2)
                      ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
-                     ->map(static fn(array $row): array => [\array_key_first($row) => \array_first($row)])
+                     ->map(static fn(array $row): array => [\array_key_first($row) => array_first($row)])
                      ->map($this->convert(...))
                      ->ifEmpty(static fn(): iterable => \array_key_exists(0, $default) ? [[$default[0]]] : throw new NoResultException('Expected one record in result set, none found.'))
                      ->reduce(Callback::class, static fn(mixed $carry, array $value): mixed => \array_values($value)[0], null);
@@ -67,12 +71,15 @@ final class Converted implements \IteratorAggregate, ResultInterface
      */
     public function vector(...$default): mixed
     {
-        return Stream::create($this->result)
-                     ->map(static fn(array $row): array => [\array_key_first($row) => \array_first($row)])
-                     ->map($this->convert(...))
-                     ->map(static fn(array $row): mixed => \array_first($row))
-                     ->ifEmpty(static fn(): iterable => \array_key_exists(0, $default) ? [[$default[0]]] : throw new NoResultException('Expected one record in result set, none found.'))
-                     ->collect(ListCollector::class)->value;
+        assert_default_value(...$default);
+
+        $value = Stream::create($this->result)
+                       ->map(static fn(array $row): array => [\array_key_first($row) => array_first($row)])
+                       ->map($this->convert(...))
+                       ->map(static fn(array $row): mixed => array_first($row))
+                       ->collect(ListCollector::class)->value;
+
+        return 0 === \count($value) && \array_key_exists(0, $default) ? $default[0] : $value;
     }
 
     /**
@@ -80,11 +87,13 @@ final class Converted implements \IteratorAggregate, ResultInterface
      */
     public function record(...$default): mixed
     {
+        assert_default_value(...$default);
+
         return Stream::create($this->result)
                      ->take(2)
                      ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
                      ->map($this->convert(...))
-                     ->ifEmpty(static fn(): iterable => \array_key_exists(0, $default) ? [[$default[0]]] : throw new NoResultException('Expected one record in result set, none found.'))
+                     ->ifEmpty(static fn(): iterable => \array_key_exists(0, $default) ? [$default[0]] : throw new NoResultException('Expected one record in result set, none found.'))
                      ->collect(ListCollector::class)[0];
     }
 
@@ -120,7 +129,8 @@ final class Converted implements \IteratorAggregate, ResultInterface
      */
     public function getIterator(): \Traversable
     {
-        yield from $this->result;
+        yield from Stream::create($this->result)
+            ->map($this->convert(...));
     }
 
     public function __sleep(): array

@@ -38,10 +38,10 @@ final readonly class AdapterRegistry
         $registry = [];
 
         foreach ($adapters as $adapter) {
-            $registry[$adapter->name] = !isset($registry[$adapter->name]) ? $adapter : throw new LogicException(\sprintf(
+            $registry[$adapter->name] = isset($registry[$adapter->name]) ? throw new LogicException(\sprintf(
                 'Executor adapter with same connection name "%s" is already registered in registry.',
                 $adapter->name,
-            ));
+            )) : $adapter;
         }
 
         $this->registry = $registry;
@@ -59,7 +59,6 @@ final readonly class AdapterRegistry
      *
      * @param non-empty-string|null $connection Connection name used by executor adapter, or default if not provided.
      *
-     * @return AdapterInterface
      *
      * @throws RuntimeException If executor does not exists.
      */

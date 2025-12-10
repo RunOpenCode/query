@@ -71,8 +71,6 @@ final class Variables implements VariablesInterface
      *
      * @param non-empty-string|null                             $parser    Parser to be used with these variables.
      * @param VariablesInterface|array<non-empty-string, mixed> $variables Variables bag or array to create from.
-     *
-     * @return self
      */
     public static function create(?string $parser = null, VariablesInterface|array $variables = []): self
     {
@@ -136,7 +134,6 @@ final class Variables implements VariablesInterface
      *
      * @param non-empty-string $name Name of the variable.
      *
-     * @return mixed
      *
      * @throws OutOfBoundsException If variable does not exist.
      */
@@ -163,8 +160,6 @@ final class Variables implements VariablesInterface
      * Checks if variable exists in the bag.
      *
      * @param non-empty-string $name Name of the variable.
-     *
-     * @return bool
      */
     public function __isset(string $name): bool
     {

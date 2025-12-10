@@ -33,10 +33,10 @@ final readonly class RetryMiddleware implements QueryMiddlewareInterface, Statem
      */
     public function __construct(?array $catch = null)
     {
-        $this->catcher = new Catcher(!empty($catch) ? $catch : [
+        $this->catcher = new Catcher($catch === null || $catch === [] ? [
             DeadlockException::class,
             LockWaitTimeoutException::class,
-        ]);
+        ] : $catch);
     }
 
     /**
@@ -76,7 +76,6 @@ final readonly class RetryMiddleware implements QueryMiddlewareInterface, Statem
      * @template T
      *
      * @param callable():T     $function
-     * @param ContextInterface $context
      *
      * @return T
      */
@@ -94,7 +93,7 @@ final readonly class RetryMiddleware implements QueryMiddlewareInterface, Statem
             default => throw new RuntimeException(\sprintf('Unsupported context implementation provided "%s".', $context::class))
         };
 
-        if (null === $transaction && !$configuration->unsafe) {
+        if (!$transaction instanceof \RunOpenCode\Component\Query\Contract\Context\TransactionContextInterface && !$configuration->unsafe) {
             throw new LogicException('Retrying execution within transaction is unsafe. If you REALLY know what you are doing, you may override this behaviour by setting "unsafe" to "true" within your configuration.');
         }
 
