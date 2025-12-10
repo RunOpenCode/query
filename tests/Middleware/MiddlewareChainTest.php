@@ -34,6 +34,7 @@ final class MiddlewareChainTest extends TestCase
         $adapter = $this->createMock(AdapterInterface::class);
 
         $adapter
+            ->expects($this->atLeastOnce())
             ->method(PropertyHook::get('name'))
             ->willReturn('foo');
 
@@ -77,6 +78,7 @@ final class MiddlewareChainTest extends TestCase
         $adapter = $this->createMock(AdapterInterface::class);
 
         $adapter
+            ->expects($this->atLeastOnce())
             ->method(PropertyHook::get('name'))
             ->willReturn('foo');
 

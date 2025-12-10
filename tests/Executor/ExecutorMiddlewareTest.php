@@ -34,6 +34,7 @@ final class ExecutorMiddlewareTest extends TestCase
 
         $this
             ->adapter
+            ->expects($this->atLeastOnce())
             ->method(PropertyHook::get('name'))
             ->willReturn('foo');
 
@@ -45,7 +46,7 @@ final class ExecutorMiddlewareTest extends TestCase
     #[Test]
     public function query(): void
     {
-        $expected = $this->createMock(ResultInterface::class);
+        $expected = $this->createStub(ResultInterface::class);
 
         $this->adapter
             ->expects($this->once())
@@ -68,7 +69,7 @@ final class ExecutorMiddlewareTest extends TestCase
     #[Test]
     public function statement(): void
     {
-        $expected = $this->createMock(AffectedInterface::class);
+        $expected = $this->createStub(AffectedInterface::class);
 
         $this->adapter
             ->expects($this->once())
@@ -93,8 +94,8 @@ final class ExecutorMiddlewareTest extends TestCase
     {
         $this->expectException(LogicException::class);
 
-        $firstAdapter      = $this->createMock(AdapterInterface::class);
-        $secondAdapter     = $this->createMock(AdapterInterface::class);
+        $firstAdapter      = $this->createStub(AdapterInterface::class);
+        $secondAdapter     = $this->createStub(AdapterInterface::class);
         $firstTransaction  = Transaction::connection('first');
         $secondTransaction = Transaction::connection('second');
 

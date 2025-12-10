@@ -5,20 +5,19 @@ declare(strict_types=1);
 namespace RunOpenCode\Component\Query\Tests\Doctrine\Dbal;
 
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Driver\PgSQL\Exception\UnknownParameter;
-use Doctrine\DBAL\Driver\Result as DbalDriverResult;
-use Doctrine\DBAL\Result as DbalResult;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\TestWith;
+use PHPUnit\Framework\MockObject\Runtime\PropertyHook;
 use PHPUnit\Framework\TestCase;
+use RunOpenCode\Component\Query\Doctrine\Dbal\Dataset\ArrayDataset;
+use RunOpenCode\Component\Query\Doctrine\Dbal\Dataset\DbalDataset;
+use RunOpenCode\Component\Query\Doctrine\Dbal\DatasetInterface;
 use RunOpenCode\Component\Query\Doctrine\Dbal\Result;
-use RunOpenCode\Component\Query\Exception\DriverException;
 use RunOpenCode\Component\Query\Exception\InvalidArgumentException;
-use RunOpenCode\Component\Query\Exception\LogicException;
 use RunOpenCode\Component\Query\Exception\NonUniqueResultException;
 use RunOpenCode\Component\Query\Exception\NoResultException;
-use RunOpenCode\Component\Query\Exception\RuntimeException;
+use RunOpenCode\Component\Query\Exception\ResultClosedException;
 use RunOpenCode\Component\Query\Tests\PHPUnit\DbalTools;
 
 final class ResultTest extends TestCase
@@ -34,19 +33,22 @@ final class ResultTest extends TestCase
         $this->connection = $this->createSqlLiteConnection();
     }
 
-    #[Test]
-    #[DataProvider('get_data_for_get_scalar')]
-    public function get_scalar(string $query, mixed $expected): void
+    private function execute(string $query): Result
     {
-        $result = new Result($this->connection->executeQuery($query));
+        return new Result(new DbalDataset('default', $this->connection->executeQuery($query)));
+    }
 
-        $this->assertSame($expected, $result->getScalar());
+    #[Test]
+    #[DataProvider('get_data_for_scalar')]
+    public function scalar(string $query, mixed $expected): void
+    {
+        $this->assertSame($expected, $this->execute($query)->scalar());
     }
 
     /**
      * @return iterable<string, array{string, scalar}>
      */
-    public static function get_data_for_get_scalar(): iterable
+    public static function get_data_for_scalar(): iterable
     {
         yield 'One column, one row, int result.' => ['SELECT id FROM test WHERE id = 1', 1];
         yield 'Multiple columns, one row, int result.' => ['SELECT id, title FROM test WHERE id = 1', 1];
@@ -54,46 +56,38 @@ final class ResultTest extends TestCase
     }
 
     #[Test]
-    public function get_scalar_returns_default_when_no_results(): void
+    public function scalar_returns_default_when_no_results(): void
     {
-        $result = new Result($this->connection->executeQuery('SELECT id FROM test WHERE id = -1'));
-
-        $this->assertSame(42, $result->getScalar(42));
+        $this->assertSame(42, $this->execute('SELECT id FROM test WHERE id = -1')->scalar(42));
     }
 
     #[Test]
-    public function get_scalar_throws_exception_when_resultset_is_empty(): void
+    public function scalar_throws_exception_when_resultset_is_empty(): void
     {
         $this->expectException(NoResultException::class);
 
-        $result = new Result($this->connection->executeQuery('SELECT id FROM test WHERE id = -1'));
-
-        $result->getScalar();
+        $this->execute('SELECT id FROM test WHERE id = -1')->scalar();
     }
 
     #[Test]
-    public function get_scalar_throws_exception_when_resultset_has_more_than_one_row(): void
+    public function scalar_throws_exception_when_resultset_has_more_than_one_row(): void
     {
         $this->expectException(NonUniqueResultException::class);
 
-        $result = new Result($this->connection->executeQuery('SELECT id FROM test'));
-
-        $result->getScalar();
+        $this->execute('SELECT id FROM test')->scalar();
     }
 
     #[Test]
-    #[DataProvider('get_data_for_get_vector')]
-    public function get_vector(string $query, mixed $expected): void
+    #[DataProvider('get_data_for_vector')]
+    public function vector(string $query, mixed $expected): void
     {
-        $result = new Result($this->connection->executeQuery($query));
-
-        $this->assertSame($expected, $result->getVector());
+        $this->assertSame($expected, $this->execute($query)->vector());
     }
 
     /**
      * @return iterable<string, array{string, mixed}>
      */
-    public static function get_data_for_get_vector(): iterable
+    public static function get_data_for_vector(): iterable
     {
         yield 'One column, int result.' => ['SELECT id FROM test ORDER BY id', [1, 2, 3, 4, 5]];
         yield 'Multiple columns, int result.' => ['SELECT id, title FROM test ORDER BY id', [1, 2, 3, 4, 5]];
@@ -102,157 +96,55 @@ final class ResultTest extends TestCase
     }
 
     #[Test]
-    public function get_vector_returns_default_when_no_results(): void
+    public function vector_returns_default_when_no_results(): void
     {
-        $result = new Result($this->connection->executeQuery('SELECT id FROM test WHERE id = -1'));
-
-        $this->assertSame(['foo', 'bar'], $result->getVector(['foo', 'bar']));
+        $this->assertSame(['foo', 'bar'], $this->execute('SELECT id FROM test WHERE id = -1')->vector(['foo', 'bar']));
     }
 
     #[Test]
-    public function get_record(): void
+    public function record(): void
     {
-        $result = new Result($this->connection->executeQuery('SELECT id, title FROM test WHERE id = 1'));
-
-        $this->assertSame(['id' => 1, 'title' => 'Title 1'], $result->getRecord());
+        $this->assertSame(['id' => 1, 'title' => 'Title 1'], $this->execute('SELECT id, title FROM test WHERE id = 1')->record());
     }
 
     #[Test]
-    public function get_record_returns_default_when_no_results(): void
+    public function record_returns_default_when_no_results(): void
     {
-        $result = new Result($this->connection->executeQuery('SELECT * FROM test WHERE id = -1'));
-
-        $this->assertSame(['foo', 'bar'], $result->getRecord(['foo', 'bar']));
+        $this->assertSame(['foo', 'bar'], $this->execute('SELECT * FROM test WHERE id = -1')->record(['foo', 'bar']));
     }
 
     #[Test]
-    public function get_record_throws_exception_when_resultset_is_empty(): void
+    public function record_throws_exception_when_resultset_is_empty(): void
     {
         $this->expectException(NoResultException::class);
 
-        $result = new Result($this->connection->executeQuery('SELECT * FROM test WHERE id = -1'));
-
-        $result->getRecord();
+        $this->execute('SELECT * FROM test WHERE id = -1')->record();
     }
 
     #[Test]
-    public function get_record_throws_exception_when_resultset_has_more_than_one_row(): void
+    public function record_throws_exception_when_resultset_has_more_than_one_row(): void
     {
         $this->expectException(NonUniqueResultException::class);
 
-        $result = new Result($this->connection->executeQuery('SELECT * FROM test'));
-
-        $result->getRecord();
+        $this->execute('SELECT * FROM test')->record();
     }
 
     #[Test]
-    #[TestWith(['getScalar'], 'Method getScalar()')]
-    #[TestWith(['getVector'], 'Method getVector()')]
-    #[TestWith(['getRecord'], 'Method getRecord()')]
+    #[TestWith(['scalar'], 'Method scalar()')]
+    #[TestWith(['vector'], 'Method vector()')]
+    #[TestWith(['record'], 'Method record()')]
     public function methods_with_variadic_defaults_throw_exception_on_multiple_default_values(string $method): void
     {
         $this->expectException(InvalidArgumentException::class);
 
-        $result = new Result($this->createMock(DbalResult::class));
+        $result = new Result(new ArrayDataset('default', []));
         $result->{$method}('foo', 'bar');
-    }
-
-    #[Test]
-    public function column_count(): void
-    {
-        $this->assertSame(2, new Result($this->connection->executeQuery('SELECT id, title FROM test'))->columnCount());
-    }
-
-    #[Test]
-    public function fetch_associative(): void
-    {
-        $result  = new Result($this->connection->executeQuery('SELECT id, title FROM test WHERE id IN (1, 2) ORDER BY id'));
-        $fetched = [];
-
-        while (false !== ($row = $result->fetchAssociative())) {
-            $fetched[] = $row;
-        }
-
-        $this->assertSame([
-            ['id' => 1, 'title' => 'Title 1'],
-            ['id' => 2, 'title' => 'Title 2'],
-        ], $fetched);
-    }
-
-    #[Test]
-    public function fetch_numeric(): void
-    {
-        $result  = new Result($this->connection->executeQuery('SELECT id, title FROM test WHERE id IN (1, 2) ORDER BY id'));
-        $fetched = [];
-
-        while (false !== ($row = $result->fetchNumeric())) {
-            $fetched[] = $row;
-        }
-
-        $this->assertSame([
-            [1, 'Title 1'],
-            [2, 'Title 2'],
-        ], $fetched);
-    }
-
-    #[Test]
-    public function fetch_one(): void
-    {
-        $result = new Result($this->connection->executeQuery('SELECT id, title FROM test WHERE id = 1'));
-
-        $this->assertSame(1, $result->fetchOne());
-    }
-
-    #[Test]
-    public function fetch_all_associative(): void
-    {
-        $result = new Result($this->connection->executeQuery('SELECT id, title FROM test WHERE id IN (1, 2) ORDER BY id'));
-
-        $this->assertSame([
-            ['id' => 1, 'title' => 'Title 1'],
-            ['id' => 2, 'title' => 'Title 2'],
-        ], $result->fetchAllAssociative());
-    }
-
-    #[Test]
-    public function fetch_all_numeric(): void
-    {
-        $result = new Result($this->connection->executeQuery('SELECT id, title FROM test WHERE id IN (1, 2) ORDER BY id'));
-
-        $this->assertSame([
-            [1, 'Title 1'],
-            [2, 'Title 2'],
-        ], $result->fetchAllNumeric());
-    }
-
-    #[Test]
-    public function fetch_first_column(): void
-    {
-        $result = new Result($this->connection->executeQuery('SELECT id, title FROM test WHERE id IN (1, 2) ORDER BY id'));
-
-        $this->assertSame([1, 2], $result->fetchFirstColumn());
-    }
-
-    #[Test]
-    public function row_count(): void
-    {
-        $result = new Result($this->connection->executeQuery('DELETE FROM test WHERE id IN (1, 2)'));
-
-        $this->assertSame(2, $result->rowCount());
-    }
-
-    #[Test]
-    public function counts(): void
-    {
-        $result = new Result($this->connection->executeQuery('SELECT id, title FROM test WHERE id IN (1, 2) ORDER BY id'));
-
-        $this->assertCount(2, $result);
     }
 
     #[Test]
     public function iterates(): void
     {
-        $result  = new Result($this->connection->executeQuery('SELECT id, title FROM test WHERE id IN (1, 2) ORDER BY id'));
+        $result  = $this->execute('SELECT id, title FROM test WHERE id IN (1, 2) ORDER BY id');
         $fetched = [];
 
         foreach ($result as $row) {
@@ -269,13 +161,13 @@ final class ResultTest extends TestCase
     #[DataProvider('get_data_for_free')]
     public function free(string $method): void
     {
-        $this->expectException(LogicException::class);
+        $this->expectException(ResultClosedException::class);
 
-        $result = new Result($this->connection->executeQuery('SELECT id, title FROM test WHERE id IN (1, 2) ORDER BY id'));
+        $result = $this->execute('SELECT id, title FROM test WHERE id IN (1, 2) ORDER BY id');
 
         $result->free();
 
-        // A small trick applied, method will either throw LogicException, or,
+        // A small trick applied, method will either throw ResultClosedException, or,
         // if method is `getIterator()`, `iterator_to_array` will trigger it
         // and we will catch it as well.
         //
@@ -303,89 +195,52 @@ final class ResultTest extends TestCase
     #[Test]
     public function supports_serialization(): void
     {
-        $result     = new Result($this->connection->executeQuery('SELECT id, title FROM test WHERE id IN (1, 2) ORDER BY id'));
+        $result     = $this->execute('SELECT id, title FROM test WHERE id IN (1, 2) ORDER BY id');
         $serialized = \serialize($result);
 
         /** @var Result $unserialized */
         $unserialized = \unserialize($serialized, ['allowed_classes' => true]);
 
+        // We expect for result set not to be closed when serialized.
         $this->assertSame([
             ['id' => 1, 'title' => 'Title 1'],
             ['id' => 2, 'title' => 'Title 2'],
-        ], $unserialized->fetchAllAssociative());
+        ], \iterator_to_array($result));
+
+        // We deserialized result set to yield same results as original.
+        $this->assertSame([
+            ['id' => 1, 'title' => 'Title 1'],
+            ['id' => 2, 'title' => 'Title 2'],
+        ], \iterator_to_array($unserialized));
     }
 
-    /**
-     * @param non-empty-string  $method
-     * @param ?non-empty-string $configure
-     */
-    #[Test]
-    #[DataProvider('get_proxying_methods')]
-    public function wraps_vendor_exception(string $method, ?string $configure = null): void
+    public function serialization_of_closed_result_set_throws_exception(): void
     {
-        $this->expectException(DriverException::class);
+        $this->expectException(ResultClosedException::class);
 
-        $resultset = $this->createMock(DbalDriverResult::class);
+        $result = $this->execute('SELECT * FROM test');
 
-        $resultset
-            ->expects($this->once())
-            ->method($configure ?? $method)
-            ->willThrowException(new UnknownParameter('Vendor exception message.'));
+        \iterator_to_array($result);
 
-        $result = new Result($resultset);
-
-        $result->{$method}();
-    }
-
-    /**
-     * @param non-empty-string  $method
-     * @param ?non-empty-string $configure
-     */
-    #[Test]
-    #[DataProvider('get_proxying_methods')]
-    public function wraps_unknown_exception(string $method, ?string $configure = null): void
-    {
-        $this->expectException(RuntimeException::class);
-
-        $resultset = $this->createMock(DbalDriverResult::class);
-
-        $resultset
-            ->expects($this->once())
-            ->method($configure ?? $method)
-            ->willThrowException(new \Exception('Unknown exception message.'));
-
-        $result = new Result($resultset);
-
-        $result->{$method}();
-    }
-
-    /**
-     * @return iterable<string, array{non-empty-string}>
-     */
-    public static function get_proxying_methods(): iterable
-    {
-        yield 'Method fetchNumeric()' => ['fetchNumeric'];
-        yield 'Method fetchAssociative()' => ['fetchAssociative'];
-        yield 'Method fetchOne()' => ['fetchOne'];
-        yield 'Method fetchAllNumeric()' => ['fetchAllNumeric'];
-        yield 'Method fetchAllAssociative()' => ['fetchAllAssociative'];
-        yield 'Method fetchFirstColumn()' => ['fetchFirstColumn'];
-        yield 'Method rowCount()' => ['rowCount'];
-        yield 'Method columnCount()' => ['columnCount'];
-        yield 'Method __sleep()' => ['__sleep', 'columnCount'];
+        \serialize($result);
     }
 
     #[Test]
     public function free_ignores_exception(): void
     {
-        $resultset = $this->createMock(DbalDriverResult::class);
-
-        $resultset
+        $dataset = $this->createMock(DatasetInterface::class);
+        
+        $dataset
+            ->expects($this->once())
+            ->method(PropertyHook::get('connection'))
+            ->willReturn('default');
+        
+        $dataset
             ->expects($this->once())
             ->method('free')
             ->willThrowException(new \Exception('Unknown exception message.'));
 
-        $result = new Result($resultset);
+        $result = new Result($dataset);
 
         $result->free();
     }

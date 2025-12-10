@@ -24,6 +24,14 @@ interface TransactionContextInterface extends \IteratorAggregate, ContextInterfa
     }
 
     /**
+     * Check if execution scope is allowed within current transaction context.
+     *
+     * @param ExecutionScope                      $scope      Execution scope.
+     * @param ExecutionInterface|non-empty-string $connection Execution configuration or connection which will be used for execution of query or statement.
+     */
+    public function accepts(ExecutionScope $scope, ExecutionInterface|string $connection): bool;
+    
+    /**
      * Append additional transaction configuration to context.
      *
      * @param TransactionInterface $configuration Additional configuration of the transaction execution.
@@ -53,12 +61,4 @@ interface TransactionContextInterface extends \IteratorAggregate, ContextInterfa
      * @return self New instance of transaction context with provided transaction configurations.
      */
     public function withTransactions(TransactionInterface ...$configurations): self;
-
-    /**
-     * Check if execution scope is allowed within current transaction context.
-     *
-     * @param ExecutionScope                      $scope      Execution scope.
-     * @param ExecutionInterface|non-empty-string $connection Execution configuration or connection which will be used for execution of query or statement.
-     */
-    public function accepts(ExecutionScope $scope, ExecutionInterface|string $connection): bool;
 }

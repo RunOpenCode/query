@@ -73,6 +73,11 @@ final class ParserRegistryTest extends TestCase
     public function throws_exception_when_referenced_parser_does_not_exists(): void
     {
         $this->expectException(NotExistsException::class);
+        
+        $this
+            ->parser
+            ->expects($this->never())
+            ->method($this->anything());
 
         $this->registry->parse('foo', new Variables(parser: 'bar'));
     }

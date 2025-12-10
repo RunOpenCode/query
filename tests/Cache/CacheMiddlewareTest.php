@@ -14,6 +14,7 @@ use RunOpenCode\Component\Query\Cache\CacheMiddleware;
 use RunOpenCode\Component\Query\Cache\Invalidate;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
 use RunOpenCode\Component\Query\Doctrine\Configuration\Dbal;
+use RunOpenCode\Component\Query\Doctrine\Dbal\Dataset\ArrayDataset;
 use RunOpenCode\Component\Query\Doctrine\Dbal\Result;
 use RunOpenCode\Component\Query\Exception\UnsupportedException;
 use RunOpenCode\Component\Query\Middleware\QueryContext;
@@ -36,7 +37,7 @@ final class CacheMiddlewareTest extends TestCase
     #[Test]
     public function caches_query(): void
     {
-        $expected = $this->createMock(ResultInterface::class);
+        $expected = $this->createStub(ResultInterface::class);
         $item     = $this->createMock(ItemInterface::class);
         $context  = new QueryContext(
             query: 'foo',
@@ -75,7 +76,7 @@ final class CacheMiddlewareTest extends TestCase
     #[Test]
     public function provides_cached_query_result(): void
     {
-        $expected = $this->createMock(ResultInterface::class);
+        $expected = $this->createStub(ResultInterface::class);
         $item     = $this->createMock(ItemInterface::class);
         $context  = new QueryContext(
             query: 'foo',
@@ -108,7 +109,7 @@ final class CacheMiddlewareTest extends TestCase
     #[Test]
     public function skips_query_caching_when_instructed(): void
     {
-        $expected = $this->createMock(ResultInterface::class);
+        $expected = $this->createStub(ResultInterface::class);
         $item     = $this->createMock(ItemInterface::class);
         $context  = new QueryContext(
             query: 'foo',
@@ -152,7 +153,7 @@ final class CacheMiddlewareTest extends TestCase
             ->expects($this->never())
             ->method($this->anything());
 
-        $expected = new Result(new ArrayResult([], []));
+        $expected = new Result(new ArrayDataset('default', []));
         $context  = new QueryContext(
             query: 'foo',
             execution: new Dbal('default'),
@@ -178,6 +179,9 @@ final class CacheMiddlewareTest extends TestCase
     #[Test]
     public function invalidates_tags(): void
     {
+        // We will not use mock from setup.
+        $this->cache->expects($this->never())->method($this->anything());
+        
         $cache      = $this->createMock(TagAwareAdapterInterface::class);
         $middleware = new CacheMiddleware($cache);
 
@@ -193,6 +197,9 @@ final class CacheMiddlewareTest extends TestCase
     public function throws_exception_if_cache_tags_are_not_supported(): void
     {
         $this->expectException(UnsupportedException::class);
+        
+        // We will not use mock from setup.
+        $this->cache->expects($this->never())->method($this->anything());
 
         $this->middleware->invalidate(new Invalidate(tags: ['foo', 'bar']));
     }

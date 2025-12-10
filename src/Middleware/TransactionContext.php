@@ -47,6 +47,26 @@ final readonly class TransactionContext implements TransactionContextInterface
     /**
      * {@inheritdoc}
      */
+    public function accepts(ExecutionScope $scope, ExecutionInterface|string $connection): bool
+    {
+        $name = $connection instanceof ExecutionInterface ? $connection->connection : $connection;
+
+        \assert(null !== $name, new LogicException('Connection name must be provided with adapter configuration.'));
+
+        if (ExecutionScope::None === $scope) {
+            return true;
+        }
+
+        if (ExecutionScope::Strict === $scope) {
+            return $this->configurations->has($name);
+        }
+
+        return $this->configurations->has($name) || $this->parent?->accepts($scope, $name);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function peak(object|string $type): ?object
     {
         return $this->middlewares->peak($type);
@@ -90,26 +110,6 @@ final readonly class TransactionContext implements TransactionContextInterface
         $instance->middlewares->sync($this->middlewares);
 
         return $instance;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function accepts(ExecutionScope $scope, ExecutionInterface|string $connection): bool
-    {
-        $name = $connection instanceof ExecutionInterface ? $connection->connection : $connection;
-
-        \assert(null !== $name, new LogicException('Connection name must be provided with adapter configuration.'));
-
-        if (ExecutionScope::None === $scope) {
-            return true;
-        }
-
-        if (ExecutionScope::Strict === $scope) {
-            return $this->configurations->has($name);
-        }
-
-        return $this->configurations->has($name) || $this->parent?->accepts($scope, $name);
     }
 
     /**

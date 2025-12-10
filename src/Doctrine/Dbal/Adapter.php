@@ -23,6 +23,7 @@ use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
 use RunOpenCode\Component\Query\Contract\Configuration\TransactionInterface;
 use RunOpenCode\Component\Query\Doctrine\Affected;
 use RunOpenCode\Component\Query\Doctrine\Configuration\Dbal;
+use RunOpenCode\Component\Query\Doctrine\Dbal\Dataset\DbalDataset;
 use RunOpenCode\Component\Query\Doctrine\Isolator;
 use RunOpenCode\Component\Query\Doctrine\Configuration\Transaction;
 use RunOpenCode\Component\Query\Exception\BeginTransactionException;
@@ -176,12 +177,12 @@ final readonly class Adapter implements AdapterInterface
     public function query(string $query, ExecutionInterface $configuration, ?ParametersInterface $parameters = null): ResultInterface
     {
         // Prepare query invocation closure.
-        $invocation = static function(Connection $connection) use ($query, $parameters): ResultInterface {
-            return new Result($connection->executeQuery(
+        $invocation = static function(Connection $connection) use ($query, $configuration, $parameters): ResultInterface {
+            return new Result(new DbalDataset($configuration->connection, $connection->executeQuery(
                 $query,
                 $parameters->values ?? [],
                 $parameters->types ?? [],
-            ));
+            )));
         };
 
         return $this->execute($query, $configuration, $invocation);
@@ -193,7 +194,7 @@ final readonly class Adapter implements AdapterInterface
     public function statement(string $query, ExecutionInterface $configuration, ?ParametersInterface $parameters = null): AffectedInterface
     {
         // Prepare statement invocation closure.
-        $invocation = static function(Connection $connection) use ($query, $parameters): AffectedInterface {
+        $invocation = static function(Connection $connection) use ($query, $configuration, $parameters): AffectedInterface {
             /** @var non-negative-int $affected */
             $affected = (int)$connection->executeStatement(
                 $query,
@@ -201,7 +202,7 @@ final readonly class Adapter implements AdapterInterface
                 $parameters->types ?? [],
             );
 
-            return new Affected($affected);
+            return new Affected($configuration->connection, $affected);
         };
 
         return $this->execute($query, $configuration, $invocation);

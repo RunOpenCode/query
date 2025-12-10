@@ -16,4 +16,12 @@ namespace RunOpenCode\Component\Query\Contract\Executor;
  */
 interface AffectedInterface extends \Countable
 {
+    /**
+     * Name of the connection which was used to mutate database objects.
+     *
+     * @var non-empty-string
+     */
+    public string $connection {
+        get;
+    }
 }

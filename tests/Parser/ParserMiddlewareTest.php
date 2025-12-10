@@ -37,11 +37,13 @@ final class ParserMiddlewareTest extends TestCase
 
         $this
             ->parser
+            ->expects($this->atMost(1))
             ->method(PropertyHook::get('name'))
             ->willReturn('foo');
 
         $this
             ->parser
+            ->expects($this->atMost(1))
             ->method('supports')
             ->willReturn(true);
     }
@@ -76,7 +78,7 @@ final class ParserMiddlewareTest extends TestCase
             )
             ->willReturn('foo_parsed');
 
-        $this->middleware->query('foo', $context, fn(): ResultInterface => $this->createMock(ResultInterface::class));
+        $this->middleware->query('foo', $context, fn(): ResultInterface => $this->createStub(ResultInterface::class));
     }
 
     #[Test]
@@ -109,6 +111,6 @@ final class ParserMiddlewareTest extends TestCase
             )
             ->willReturn('foo_parsed');
 
-        $this->middleware->statement('foo', $context, fn(): AffectedInterface => $this->createMock(AffectedInterface::class));
+        $this->middleware->statement('foo', $context, fn(): AffectedInterface => $this->createStub(AffectedInterface::class));
     }
 }

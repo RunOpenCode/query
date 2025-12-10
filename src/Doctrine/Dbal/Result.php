@@ -4,364 +4,110 @@ declare(strict_types=1);
 
 namespace RunOpenCode\Component\Query\Doctrine\Dbal;
 
-use Doctrine\DBAL\Cache\ArrayResult;
-use Doctrine\DBAL\Driver\Exception as DbalDriverException;
-use Doctrine\DBAL\Driver\Result as DbalDriverResult;
-use Doctrine\DBAL\Exception as DbalException;
-use Doctrine\DBAL\Result as DbalResult;
+use RunOpenCode\Component\Dataset\Collector\ListCollector;
+use RunOpenCode\Component\Dataset\Reducer\Callback;
+use RunOpenCode\Component\Dataset\Stream;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
-use RunOpenCode\Component\Query\Exception\DriverException;
+use RunOpenCode\Component\Query\Doctrine\Dbal\Dataset\ArrayDataset;
 use RunOpenCode\Component\Query\Exception\InvalidArgumentException;
-use RunOpenCode\Component\Query\Exception\LogicException;
 use RunOpenCode\Component\Query\Exception\NonUniqueResultException;
 use RunOpenCode\Component\Query\Exception\NoResultException;
-use RunOpenCode\Component\Query\Exception\RuntimeException;
+use RunOpenCode\Component\Query\Exception\ResultClosedException;
 
 /**
- * Wrapper for Doctrine Dbal result.
+ * Doctrine Dbal result set.
  *
- * This class wraps Dbal resultset and provides you with useful
- * methods to work with dataset retrieved with SELECT statement.
+ * @phpstan-import-type Row from DatasetInterface
  *
- * @implements \IteratorAggregate<array-key, mixed>
+ * @implements ResultInterface<non-negative-int, Row>
+ *
+ * @implements \IteratorAggregate<Row>
  */
-final class Result implements \IteratorAggregate, DbalDriverResult, ResultInterface
+final class Result implements \IteratorAggregate, ResultInterface
 {
+    /**
+     * {@inheritdoc}
+     */
+    public readonly string $connection;
+
+    /**
+     * {@inheritdoc}
+     */
+    public private(set) bool $closed;
+
+    /**
+     * Create new result set from data set retrieved by Doctrine Dbal.
+     *
+     * @param DatasetInterface $dataset Data set, retrieved by Doctrine Dbal.
+     */
     public function __construct(
-        private DbalDriverResult|DbalResult $result
+        private DatasetInterface $dataset,
     ) {
-        // noop.
+        $this->connection = $this->dataset->connection;
+        $this->closed     = false;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getScalar(mixed ...$default): mixed
+    public function scalar(mixed ...$default): mixed
     {
-        $this->assertResultAvailable(__METHOD__);
-
-        if (\count($default) > 1) {
-            throw new InvalidArgumentException(\sprintf(
-                'Expected at most one default value, %d given.',
-                \count($default),
-            ));
-        }
-
-        $scalar = $this->fetchOne();
-
-        // Try next one to determine if result is unique.
-        if (false !== $scalar && false !== $this->fetchOne()) {
-            throw new NonUniqueResultException('Expected only one result for given query, multiple retrieved.');
-        }
-
-        if (false !== $scalar) {
-            return $scalar;
-        }
-
-        return 0 < \count($default) ? $default[0] : throw new NoResultException('Expected one result for given query, none retrieved.');
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getVector(mixed ...$default): mixed
-    {
-        $this->assertResultAvailable(__METHOD__);
-
-        if (\count($default) > 1) {
-            throw new InvalidArgumentException(\sprintf(
-                'Expected at most one default value, %d given.',
-                \count($default),
-            ));
-        }
-
-        $result = [];
-
-        while (false !== ($val = $this->fetchOne())) {
-            $result[] = $val;
-        }
-
-        if (0 !== \count($result)) {
-            return $result;
-        }
-
-        return 0 < \count($default) ? $default[0] : $result;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getRecord(mixed ...$default): mixed
-    {
-        $this->assertResultAvailable(__METHOD__);
-
-        if (\count($default) > 1) {
-            throw new InvalidArgumentException(\sprintf(
-                'Expected at most one default value, %d given.',
-                \count($default),
-            ));
-        }
-
-        $row = $this->fetchAssociative();
-
-        // Try next one to determine if result is unique.
-        if (false !== $row && false !== $this->fetchAssociative()) {
-            throw new NonUniqueResultException('Expected only one result for given query, multiple retrieved.');
-        }
-
-        if (false !== $row) {
-            return $row;
-        }
-
-        return 0 < \count($default) ? $default[0] : throw new NoResultException('Expected one result for given query, none retrieved.');
-    }
-
-    /**
-     * {@inheritdoc}
-     *
-     * @return non-negative-int
-     *
-     * @throws DriverException If a database driver error occurs.
-     * @throws RuntimeException If an unexpected error occurs.
-     */
-    public function columnCount(): int
-    {
-        $this->assertResultAvailable(__METHOD__);
+        $this->assertNotClosed();
+        $this->assertDefaultValue(...$default);
 
         try {
-            // @phpstan-ignore-next-line
-            return $this->result->columnCount();
-        } catch (DbalException|DbalDriverException $exception) {
-            throw new DriverException(
-                'An error occurred while counting columns using Doctrine Dbal database driver.',
-                $exception,
-            );
-        } catch (\Exception $exception) { // @phpstan-ignore-line
-            throw new RuntimeException(
-                'An unexpected error occurred while counting columns using Doctrine Dbal database driver.',
-                $exception,
-            );
+            return Stream::create($this->dataset->vector())
+                         ->take(2)
+                         ->ifEmpty(static fn(): iterable => \array_key_exists(0, $default) ? [$default[0]] : throw new NoResultException('Expected one record in result set, none found.'))
+                         ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
+                         ->reduce(Callback::class, static fn(mixed $carry, mixed $value): mixed => $value, null);
+        } finally {
+            $this->free();
         }
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @throws DriverException If a database driver error occurs.
-     * @throws RuntimeException If an unexpected error occurs.
      */
-    public function fetchAssociative(): array|false
+    public function vector(mixed ...$default): mixed
     {
-        $this->assertResultAvailable(__METHOD__);
+        $this->assertNotClosed();
+        $this->assertDefaultValue(...$default);
 
         try {
-            return $this->result->fetchAssociative();
-        } catch (DbalException|DbalDriverException $exception) {
-            throw new DriverException(
-                'An error occurred while fetching row as associative array using Doctrine Dbal database driver.',
-                $exception,
-            );
-        } catch (\Exception $exception) { // @phpstan-ignore-line
-            throw new RuntimeException(
-                'An unexpected error occurred while fetching row as associative array using Doctrine Dbal database driver.',
-                $exception,
-            );
+            $value = Stream::create($this->dataset->vector())->collect(ListCollector::class)->value;
+            
+            return 0 === \count($value) &&  \array_key_exists(0, $default) ? $default[0] : $value;
+        } finally {
+            $this->free();
         }
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @throws DriverException If a database driver error occurs.
-     * @throws RuntimeException If an unexpected error occurs.
      */
-    public function fetchNumeric(): array|false
+    public function record(mixed ...$default): mixed
     {
-        $this->assertResultAvailable(__METHOD__);
+        $this->assertNotClosed();
+        $this->assertDefaultValue(...$default);
 
         try {
-            return $this->result->fetchNumeric();
-        } catch (DbalException|DbalDriverException $exception) {
-            throw new DriverException(
-                'An error occurred while fetching row as numeric array using Doctrine Dbal database driver.',
-                $exception,
-            );
-        } catch (\Exception $exception) { // @phpstan-ignore-line
-            throw new RuntimeException(
-                'An unexpected error occurred while fetching row as numeric array using Doctrine Dbal database driver.',
-                $exception,
-            );
+            return Stream::create($this->dataset)
+                         ->take(2)
+                         ->ifEmpty(static fn(): iterable => \array_key_exists(0, $default) ? [$default[0]] : throw new NoResultException('Expected one record in result set, none found.'))
+                         ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
+                         ->collect(ListCollector::class)[0];
+        } finally {
+            $this->free();
         }
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @throws DriverException If a database driver error occurs.
-     * @throws RuntimeException If an unexpected error occurs.
      */
-    public function fetchOne(): mixed
+    public function all(): array
     {
-        $this->assertResultAvailable(__METHOD__);
-
-        try {
-            return $this->result->fetchOne();
-        } catch (DbalException|DbalDriverException $exception) {
-            throw new DriverException(
-                'An error occurred while fetching first value of next row using Doctrine Dbal database driver.',
-                $exception,
-            );
-        } catch (\Exception $exception) { // @phpstan-ignore-line
-            throw new RuntimeException(
-                'An unexpected error occurred while fetching first value of next row using Doctrine Dbal database driver.',
-                $exception,
-            );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     *
-     * @throws DriverException If a database driver error occurs.
-     * @throws RuntimeException If an unexpected error occurs.
-     */
-    public function fetchAllNumeric(): array
-    {
-        $this->assertResultAvailable(__METHOD__);
-
-        try {
-            return $this->result->fetchAllNumeric();
-        } catch (DbalException|DbalDriverException $exception) {
-            throw new DriverException(
-                'An error occurred while fetching all rows as numeric array using Doctrine Dbal database driver.',
-                $exception,
-            );
-        } catch (\Exception $exception) { // @phpstan-ignore-line
-            throw new RuntimeException(
-                'An unexpected error occurred while fetching all rows as numeric array using Doctrine Dbal database driver.',
-                $exception,
-            );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     *
-     * @throws DriverException If a database driver error occurs.
-     * @throws RuntimeException If an unexpected error occurs.
-     */
-    public function fetchAllAssociative(): array
-    {
-        $this->assertResultAvailable(__METHOD__);
-
-        try {
-            return $this->result->fetchAllAssociative();
-        } catch (DbalException|DbalDriverException $exception) {
-            throw new DriverException(
-                'An error occurred while fetching all rows as associative array using Doctrine Dbal database driver.',
-                $exception,
-            );
-        } catch (\Exception $exception) { // @phpstan-ignore-line
-            throw new RuntimeException(
-                'An unexpected error occurred while fetching all rows as associative array using Doctrine Dbal database driver.',
-                $exception,
-            );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     *
-     * @throws DriverException If a database driver error occurs.
-     * @throws RuntimeException If an unexpected error occurs.
-     */
-    public function fetchFirstColumn(): array
-    {
-        $this->assertResultAvailable(__METHOD__);
-
-        try {
-            return $this->result->fetchFirstColumn();
-        } catch (DbalException|DbalDriverException $exception) {
-            throw new DriverException(
-                'An error occurred while fetching first column using Doctrine Dbal database driver.',
-                $exception,
-            );
-        } catch (\Exception $exception) { // @phpstan-ignore-line
-            throw new RuntimeException(
-                'An unexpected error occurred while fetching first column using Doctrine Dbal database driver.',
-                $exception,
-            );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     *
-     * @return non-negative-int
-     *
-     * @throws DriverException If a database driver error occurs.
-     * @throws RuntimeException If an unexpected error occurs.
-     */
-    public function rowCount(): int
-    {
-        $this->assertResultAvailable(__METHOD__);
-
-        try {
-            // @phpstan-ignore-next-line
-            return (int)$this->result->rowCount();
-        } catch (DbalException|DbalDriverException $exception) {
-            throw new DriverException(
-                'An error occurred while counting rows using Doctrine Dbal database driver.',
-                $exception,
-            );
-        } catch (\Exception $exception) { // @phpstan-ignore-line
-            throw new RuntimeException(
-                'An unexpected error occurred while counting rows using Doctrine Dbal database driver.',
-                $exception,
-            );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     *
-     * @throws DriverException If a database driver error occurs.
-     * @throws RuntimeException If an unexpected error occurs.
-     */
-    public function count(): int
-    {
-        $this->assertResultAvailable(__METHOD__);
-
-        if (0 === $this->columnCount()) {
-            return $this->rowCount();
-        }
-
-        $count = $this->rowCount();
-
-        if ($count > 0) {
-            return $count;
-        }
-
-        // We can not rely on rowCount() for SELECT statements for all drivers
-        // so we need to fetch all results to be sure about the count.
-        $this->__sleep();
-
-        return $this->rowCount();
-    }
-
-    /**
-     * {@inheritdoc}
-     *
-     * @throws DriverException If a database driver error occurs.
-     * @throws RuntimeException If an unexpected error occurs.
-     */
-    public function getIterator(): \Traversable
-    {
-        $this->assertResultAvailable(__METHOD__);
-
-        while (false !== ($row = $this->fetchAssociative())) {
-            yield $row;
-        }
+        return \iterator_to_array($this);
     }
 
     /**
@@ -369,77 +115,84 @@ final class Result implements \IteratorAggregate, DbalDriverResult, ResultInterf
      */
     public function free(): void
     {
-        // @phpstan-ignore-next-line
-        if (!isset($this->result)) {
+        if (!isset($this->dataset)) { 
             return;
         }
-
+        
         try {
-            $this->result->free();
+            $this->dataset->free();
         } catch (\Exception) {
             // noop.
         }
 
-        // Kill reference to result to help garbage collection.
-        unset($this->result);
+        $this->closed = true;
+
+        unset($this->dataset);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getIterator(): \Traversable
+    {
+        $this->assertNotClosed();
+
+        try {
+            yield from $this->dataset;
+        } finally {
+            $this->free();
+        }
     }
 
     public function __sleep(): array
     {
-        $this->assertResultAvailable(__METHOD__);
+        $this->assertNotClosed();
 
-        if ($this->result instanceof ArrayResult) {
-            return ['result'];
-        }
+        $cacheable = new ArrayDataset(
+            $this->connection,
+            \iterator_to_array($this->dataset),
+        );
 
-        try {
-            $columns = [];
+        $this->dataset->free();
 
-            for ($i = 0; $i < $this->result->columnCount(); $i++) {
-                $columns[] = $this->result->getColumnName($i);
-            }
+        $this->dataset = $cacheable;
 
-            $cacheable = new ArrayResult(
-                $columns,
-                $this->result->fetchAllNumeric()
-            );
-
-            // Release original result set resources, as we no longer need it.
-            $this->result->free();
-
-            $this->result = $cacheable;
-        } catch (DbalException|DbalDriverException $exception) {
-            throw new DriverException(
-                'An error occurred while fetching results using Doctrine Dbal database driver during serialization.',
-                $exception,
-            );
-        } catch (\Exception $exception) {
-            throw new RuntimeException(
-                'An unexpected error occurred while fetching results using Doctrine Dbal database driver during serialization.',
-                $exception,
-            );
-        }
-
-        return ['result'];
+        return ['connection', 'closed', 'dataset'];
     }
 
     /**
-     * Asserts that result is still available.
-     *
-     * After calling free() method, result set is closed and no further
-     * operations are allowed.
-     *
-     * @param string $method Method name that requires open result set.
-     *
-     * @throws LogicException If result set is closed.
+     * Assert that result set is not closed.
      */
-    private function assertResultAvailable(string $method): void
+    private function assertNotClosed(): void
     {
-        // @phpstan-ignore-next-line
-        if (!isset($this->result)) {
-            throw new LogicException(\sprintf(
-                'Cannot call method "%s" on closed result set.',
-                $method,
+        if (!$this->closed) {
+            return;
+        }
+
+        throw new ResultClosedException(\sprintf(
+            'Can not call method "%s" on closed result set.',
+            \debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS)[1]['function']
+        ));
+    }
+
+    /**
+     * Assert that at most one default value is provided.
+     */
+    private function assertDefaultValue(mixed ...$default): void
+    {
+        if (\count($default) > 1) {
+            throw new InvalidArgumentException(\sprintf(
+                'Expected at most one default value when invoking method "%s" of result set, %d given.',
+                \debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS)[1]['function'],
+                \count($default),
+            ));
+        }
+
+        if (!\array_is_list($default)) {
+            throw new InvalidArgumentException(\sprintf(
+                'Expected default value to be provided without naming argument when invoking method "%s" of result set, "%s" given.',
+                \debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS)[1]['function'],
+                \array_keys($default)[0],
             ));
         }
     }

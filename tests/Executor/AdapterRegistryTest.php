@@ -17,8 +17,8 @@ final class AdapterRegistryTest extends TestCase
     #[Test]
     public function get_default_adapter(): void
     {
-        $first = $this->createMock(AdapterInterface::class);
-        $second = $this->createMock(AdapterInterface::class);
+        $first = $this->createStub(AdapterInterface::class);
+        $second = $this->createStub(AdapterInterface::class);
 
         $first
             ->method(PropertyHook::get('name'))
@@ -39,8 +39,8 @@ final class AdapterRegistryTest extends TestCase
     #[Test]
     public function get_requested_adapter(): void
     {
-        $first = $this->createMock(AdapterInterface::class);
-        $second = $this->createMock(AdapterInterface::class);
+        $first = $this->createStub(AdapterInterface::class);
+        $second = $this->createStub(AdapterInterface::class);
 
         $first
             ->method(PropertyHook::get('name'))
@@ -63,7 +63,7 @@ final class AdapterRegistryTest extends TestCase
     {
         $this->expectException(LogicException::class);
 
-        $adapter = $this->createMock(AdapterInterface::class);
+        $adapter = $this->createStub(AdapterInterface::class);
 
         $adapter
             ->method(PropertyHook::get('name'))
@@ -80,7 +80,7 @@ final class AdapterRegistryTest extends TestCase
     {
         $this->expectException(RuntimeException::class);
 
-        $adapter = $this->createMock(AdapterInterface::class);
+        $adapter = $this->createStub(AdapterInterface::class);
 
         $adapter
             ->method(PropertyHook::get('name'))

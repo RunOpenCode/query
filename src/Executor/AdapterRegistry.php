@@ -66,7 +66,6 @@ final readonly class AdapterRegistry
     public function get(?string $connection = null): AdapterInterface
     {
         $connection = $connection ?? $this->default;
-
         return $this->registry[$connection] ?? throw new RuntimeException(\sprintf(
             'Executor adapter for connection name "%s" does not exists.',
             $connection

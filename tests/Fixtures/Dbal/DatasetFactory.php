@@ -8,6 +8,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Schema\Name\UnqualifiedName;
 use Doctrine\DBAL\Schema\PrimaryKeyConstraint;
 use Doctrine\DBAL\Schema\Schema;
+use Doctrine\DBAL\Types\Types;
 
 /**
  * Fills database with predefined schema and dataset.
@@ -26,12 +27,12 @@ final class DatasetFactory
      * schema definition and datasets which can be loaded into that table.
      */
     private const array FIXTURES = [
-        'test' => [
+        'test'       => [
             'schema'   => [
                 'columns' => [
-                    'id'          => ['integer', ['unsigned' => true]],
-                    'title'       => ['string', ['length' => 32]],
-                    'description' => ['string', ['length' => 255]],
+                    'id'          => [Types::INTEGER, ['unsigned' => true]],
+                    'title'       => [Types::STRING, ['length' => 32]],
+                    'description' => [Types::STRING, ['length' => 255]],
                 ],
                 'primary' => ['id'],
             ],
@@ -43,6 +44,28 @@ final class DatasetFactory
                     ['id' => 3, 'title' => 'Title 3', 'description' => 'Description 3'],
                     ['id' => 4, 'title' => 'Title 4', 'description' => 'Description 4'],
                     ['id' => 5, 'title' => 'Title 5', 'description' => 'Description 5'],
+                ],
+            ],
+        ],
+        'conversion' => [
+            'schema'   => [
+                'columns' => [
+                    'id'            => [Types::INTEGER, ['unsigned' => true]],
+                    'text_value'    => [Types::STRING, ['length' => 255]],
+                    'float_value'   => [Types::FLOAT, ['notnull' => false]],
+                    'date_value'    => [Types::DATE_IMMUTABLE, ['notnull' => false]],
+                    'boolean_value' => [Types::BOOLEAN, ['notnull' => false]],
+                ],
+                'primary' => ['id'],
+                'cast'    => [
+                    'date_value' => Types::DATE_IMMUTABLE,
+                ],
+            ],
+            'datasets' => [
+                'default' => [
+                    ['id' => 1, 'text_value' => 'Text value 1', 'float_value' => 1.1, 'date_value' => '2005-10-11', 'boolean_value' => true],
+                    ['id' => 2, 'text_value' => 'Text value 2', 'float_value' => 1.2, 'date_value' => '2005-10-12', 'boolean_value' => false],
+                    ['id' => 3, 'text_value' => 'Text value 3', 'float_value' => 1.3, 'date_value' => '2005-10-13', 'boolean_value' => true],
                 ],
             ],
         ],
@@ -84,15 +107,23 @@ final class DatasetFactory
         }
 
         $dataset = self::FIXTURES[$table]['datasets'][$dataset];
+        $cast    = self::FIXTURES[$table]['schema']['cast'] ?? [];
 
         if (empty($dataset)) {
             return;
         }
 
         foreach ($dataset as $record) {
+            $keys   = \array_keys($record);
+            $values = \array_map(
+                fn(string $column, mixed $value): mixed => isset($cast[$column]) ? $this->cast($value, $cast[$column]) : $value,
+                $keys,
+                \array_values($record)
+            );
+
             $connection->insert(
                 $table,
-                $record,
+                \array_combine($keys, $values),
                 \array_map(static fn(array $definition): string => $definition[0], $schema['columns'])
             );
         }
@@ -129,6 +160,22 @@ final class DatasetFactory
             \sprintf('DROP TABLE IF EXISTS %s;', $name),
             ...$schema->toSql($connection->getDatabasePlatform()),
         ];
+    }
+
+    private function cast(mixed $value, string $type): mixed
+    {
+        if (null === $value) {
+            return null;
+        }
+
+        return match ($type) {
+            Types::DATE_IMMUTABLE => new \DateTimeImmutable($value),
+            default => throw new \InvalidArgumentException(\sprintf(
+                'Unsupported type "%s" for value type "%s" provided.',
+                $type,
+                \get_debug_type($value),
+            ))
+        };
     }
 
 }
