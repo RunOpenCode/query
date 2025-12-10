@@ -6,19 +6,23 @@ namespace RunOpenCode\Component\Query\Doctrine\Dbal\Middleware;
 
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\Types;
+use RunOpenCode\Component\Query\Exception\InvalidArgumentException;
 use RunOpenCode\Component\Query\Exception\LogicException;
 use RunOpenCode\Component\Query\Exception\RuntimeException;
 
+use function RunOpenCode\Component\Query\scalar_to_enum;
+
 /**
  * @phpstan-type DbalColumnType = non-empty-string
- * @phpstan-type DbalColumCustomConverter = callable(mixed, AbstractPlatform $platform): mixed
+ * @phpstan-type DbalColumCustomConverter = callable(mixed, AbstractPlatform=): mixed
+ * @phpstan-type ConversionDefinition = DbalColumnType|DbalColumCustomConverter
  *
- * @implements \IteratorAggregate<non-empty-string, DbalColumnType>
+ * @implements \IteratorAggregate<non-empty-string, ConversionDefinition>
  */
 final class Convert implements \IteratorAggregate, \Countable
 {
     /**
-     * @var array<non-empty-string, DbalColumnType|DbalColumCustomConverter>
+     * @var array<non-empty-string, ConversionDefinition>
      */
     private array $columns = [];
 
@@ -338,34 +342,18 @@ final class Convert implements \IteratorAggregate, \Countable
     /**
      * Set enum column.
      *
-     * @param non-empty-string        $name    Column name.
-     * @param class-string<\UnitEnum> ...$enum Enum type. If multiple provided, first matching will be used.
+     * @param non-empty-string        $name Column name.
+     * @param class-string<\UnitEnum> $enum Enum type
      */
-    public function enum(string $name, string ...$enum): self
+    public function enum(string $name, string $enum): self
     {
-        if (0 === \count($enum)) {
-            throw new LogicException('At least one enum must be provided.');
-        }
+        $this->columns[$name] = static function(mixed $value) use ($enum): ?\UnitEnum {
+            \assert(\is_string($value) || \is_int($value) || null === $value, new InvalidArgumentException(\sprintf(
+                'Expected string, int or null, %s given.',
+                \get_debug_type($value),
+            )));
 
-        $this->columns[$name] = static function(string|int|null $value) use ($enum): ?\UnitEnum {
-            if (null === $value) {
-                return null;
-            }
-
-            /** @var class-string<\UnitEnum> $current */
-            foreach ($enum as $current) {
-                $value = $current::tryFrom($value);
-
-                if (null !== $value) {
-                    return $value;
-                }
-            }
-
-            throw new RuntimeException(\sprintf(
-                'Non of the given enums "%s" are not compatible with serialized value "%s".',
-                \implode(', ', $enum),
-                $value,
-            ));
+            return scalar_to_enum($value, $enum);
         };
 
         return $this;

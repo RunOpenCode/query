@@ -17,7 +17,7 @@ use RunOpenCode\Component\Query\Exception\RuntimeException;
  *
  * @phpstan-type Row = array<non-empty-string, scalar|null>
  *
- * @implements \IteratorAggregate<Row>
+ * @extends \IteratorAggregate<non-negative-int, Row>
  *
  * @internal
  */
@@ -37,7 +37,7 @@ interface DatasetInterface extends \IteratorAggregate
      *
      * Retrieves a vector of scalar values.
      *
-     * @return iterable<scalar> List of scalar values.
+     * @return iterable<scalar|null> List of scalar values.
      *
      * @throws DriverException If there is a underlying driver error.
      * @throws RuntimeException If unexpected error occurs during result retrieval.

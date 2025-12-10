@@ -29,8 +29,8 @@ use RunOpenCode\Component\Query\Exception\RuntimeException;
  * Iterating result set may be executed only once, after which result set
  * becomes closed and {@see ResultClosedException} must be thrown.
  *
- * @template TKey of array-key
- * @template TRecord of mixed
+ * @template-covariant TKey of array-key = array-key
+ * @template-covariant TRecord of mixed = mixed
  *
  * @extends \Traversable<TKey, TRecord>
  */
@@ -66,7 +66,7 @@ interface ResultInterface extends \Traversable
      *
      * @param TDefault ...$default Optional default value to return if no result is found.
      *
-     * @return scalar|TDefault A single scalar value, or default value, if provided and no result found.
+     * @return ($default is empty ? scalar|null : scalar|null|TDefault) A single scalar value, or default value, if provided and no result found.
      *
      * @throws InvalidArgumentException If more than one default value is provided.
      * @throws NoResultException If there are no results of executed statement.
@@ -90,7 +90,7 @@ interface ResultInterface extends \Traversable
      *
      * @param TDefault ...$default Optional default value to return if no results are found.
      *
-     * @return list<scalar>|TDefault List of scalar values, or default value if provided and no results found.
+     * @return ($default is empty ? list<scalar|null> : (list<scalar|null>|TDefault)) List of scalar values, or default value if provided and no results found.
      *
      * @throws InvalidArgumentException If more than one default value is provided.
      * @throws DriverException If there is a underlying driver error.
@@ -109,7 +109,7 @@ interface ResultInterface extends \Traversable
      *
      * @param TDefault ...$default Optional default value to return if no results are found.
      *
-     * @return TRecord|TDefault A single (first) record of result set, or default value if provided and no results found.
+     * @return ($default is empty ? TRecord : TRecord|TDefault) A single (first) record of result set, or default value if provided and no results found.
      *
      * @throws InvalidArgumentException If more than one default value is provided.
      * @throws NoResultException If there are no results of executed statement.

@@ -36,6 +36,7 @@ final class DbalDataset implements DatasetInterface
     {
         try {
             while (false !== ($value = $this->result->fetchOne())) {
+                /** @var scalar|null $value */
                 yield $value;
             }
         } catch (DbalException|DbalDriverException $exception) {
@@ -43,7 +44,7 @@ final class DbalDataset implements DatasetInterface
                 'An error occurred while fetching first value of next row using Doctrine Dbal database driver.',
                 $exception,
             );
-        } catch (\Exception $exception) { // @phpstan-ignore-line
+        } catch (\Exception $exception) {
             throw new RuntimeException(
                 'An unexpected error occurred while fetching first value of next row using Doctrine Dbal database driver.',
                 $exception,
@@ -71,6 +72,10 @@ final class DbalDataset implements DatasetInterface
     {
         try {
             while (false !== ($row = $this->result->fetchAssociative())) {
+                /**
+                 * @var array<non-empty-string, scalar|null> $row
+                 * @phpstan-ignore-next-line
+                 */
                 yield $row;
             }
         } catch (DbalException|DbalDriverException $exception) {
@@ -78,7 +83,7 @@ final class DbalDataset implements DatasetInterface
                 'An error occurred while fetching row as associative array using Doctrine Dbal database driver.',
                 $exception,
             );
-        } catch (\Exception $exception) { // @phpstan-ignore-line
+        } catch (\Exception $exception) {
             throw new RuntimeException(
                 'An unexpected error occurred while fetching row as associative array using Doctrine Dbal database driver.',
                 $exception,

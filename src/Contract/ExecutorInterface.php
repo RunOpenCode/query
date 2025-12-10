@@ -21,6 +21,10 @@ use RunOpenCode\Component\Query\Exception\UnsupportedException;
  *
  * Executor is main entry point for executing statements/transactions with or without
  * transactional scope.
+ *
+ * @template TKey of array-key = array-key
+ * @template TValue of mixed = mixed
+ * @template TAffected of AffectedInterface = AffectedInterface
  */
 interface ExecutorInterface
 {
@@ -30,7 +34,7 @@ interface ExecutorInterface
      * @param non-empty-string $query            Query to execute.
      * @param object           ...$configuration Configuration objects for middlewares.
      *
-     * @return ResultInterface Result of execution.
+     * @return ResultInterface<TKey, TValue> Result of execution.
      *
      * @throws ConnectionException If there is a connection problem while executing query.
      * @throws SyntaxErrorException If provided query has syntax errors, or if syntax error is detected during query parsing phase using configured language.
@@ -48,7 +52,7 @@ interface ExecutorInterface
      * @param non-empty-string $statement        Statement to execute.
      * @param object           ...$configuration Configuration objects for middlewares.
      *
-     * @return AffectedInterface Report about affected database objects.
+     * @return TAffected Report about affected database objects.
      *
      * @throws ConnectionException If there is a connection problem while executing statement.
      * @throws SyntaxErrorException If provided statement has syntax errors, or if syntax error is detected during statement parsing phase using configured language.
@@ -66,7 +70,7 @@ interface ExecutorInterface
      * @template T
      *
      * @param callable(ExecutorInterface): T $function         Function to be executed inside transactional scope.
-     * @param object                         ...$configuration Transaction configurations, which may be instance of {@see \RunOpenCode\Component\Query\Contract\Configuration\TransactionInterface} to configure for which
+     * @param object                         ...$configuration Transaction configurations, which may be instance of {@see TransactionInterface} to configure for which
      *                                                         connection transaction scope should be created or middleware configuration objects.
      *
      * @return T

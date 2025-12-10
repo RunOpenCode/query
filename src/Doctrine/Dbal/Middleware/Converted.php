@@ -24,9 +24,8 @@ use function RunOpenCode\Component\Query\assert_default_value;
  *
  * @phpstan-import-type Row from DatasetInterface
  *
- * @implements ResultInterface<non-negative-int, Row>
- *
- * @implements \IteratorAggregate<Row>
+ * @implements ResultInterface<non-negative-int, mixed>
+ * @implements \IteratorAggregate<non-negative-int, mixed>
  */
 final class Converted implements \IteratorAggregate, ResultInterface
 {
@@ -42,6 +41,13 @@ final class Converted implements \IteratorAggregate, ResultInterface
         get => $this->result->closed;
     }
 
+    /**
+     * Create result set with converted values.
+     *
+     * @param ResultInterface<non-negative-int, Row> $result        Result to convert values.
+     * @param Convert                                $configuration Conversion configuration.
+     * @param AbstractPlatform                       $platform      Dbal platform.
+     */
     public function __construct(
         private ResultInterface  $result,
         private Convert          $configuration,
@@ -61,7 +67,7 @@ final class Converted implements \IteratorAggregate, ResultInterface
                      ->take(2)
                      ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
                      ->map(static fn(array $row): array => [\array_key_first($row) => array_first($row)])
-                     ->map($this->convert(...))
+                     ->map($this->convert(...)) // @phpstan-ignore-line
                      ->ifEmpty(static fn(): iterable => \array_key_exists(0, $default) ? [[$default[0]]] : throw new NoResultException('Expected one record in result set, none found.'))
                      ->reduce(Callback::class, static fn(mixed $carry, array $value): mixed => \array_values($value)[0], null);
     }
@@ -75,11 +81,11 @@ final class Converted implements \IteratorAggregate, ResultInterface
 
         $value = Stream::create($this->result)
                        ->map(static fn(array $row): array => [\array_key_first($row) => array_first($row)])
-                       ->map($this->convert(...))
+                       ->map($this->convert(...)) // @phpstan-ignore-line
                        ->map(static fn(array $row): mixed => array_first($row))
                        ->collect(ListCollector::class)->value;
 
-        return 0 === \count($value) && \array_key_exists(0, $default) ? $default[0] : $value;
+        return 0 === \count($value) && \array_key_exists(0, $default) ? $default[0] : $value; // @phpstan-ignore-line
     }
 
     /**
@@ -110,6 +116,7 @@ final class Converted implements \IteratorAggregate, ResultInterface
      */
     public function free(): void
     {
+        // @phpstan-ignore-next-line
         if (!isset($this->result)) {
             return;
         }
@@ -130,7 +137,7 @@ final class Converted implements \IteratorAggregate, ResultInterface
     public function getIterator(): \Traversable
     {
         yield from Stream::create($this->result)
-            ->map($this->convert(...));
+                         ->map($this->convert(...));
     }
 
     public function __sleep(): array
@@ -156,13 +163,14 @@ final class Converted implements \IteratorAggregate, ResultInterface
     /**
      * Convert row according to the conversion configuration.
      *
-     * @param array<non-empty-string, scalar|null> $row Row to convert values.
+     * @param Row $row Row to convert values.
      *
      * @return array<non-empty-string, mixed> Row with converted values.
      */
     private function convert(array $row): array
     {
         // Already converted.
+        // @phpstan-ignore-next-line
         if (!isset($this->configuration)) {
             return $row;
         }
@@ -175,7 +183,7 @@ final class Converted implements \IteratorAggregate, ResultInterface
             $converter = $this->configuration->get($column);
 
             if (\is_callable($converter)) {
-                $value = $converter($value);
+                $value = $converter($value, $this->platform);
                 continue;
             }
 

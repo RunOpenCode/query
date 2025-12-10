@@ -16,8 +16,8 @@ final class ArrayDataset implements DatasetInterface
     /**
      * Create new array result set.
      *
-     * @param non-empty-string $connection Connection which was used to produce result set.
-     * @param list<Row>        $result     Result set.
+     * @param non-empty-string             $connection Connection which was used to produce result set.
+     * @param array<non-negative-int, Row> $result     Result set.
      */
     public function __construct(
         public readonly string $connection,

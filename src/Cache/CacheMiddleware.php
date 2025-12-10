@@ -102,7 +102,7 @@ final readonly class CacheMiddleware implements QueryMiddlewareInterface, Transa
      * @param QueryContextInterface|TransactionContextInterface $context Current context.
      * @param NextQuery|NextTransaction                         $next    Next middleware to call.
      *
-     * @return ($subject is non-empty-string ? ResultInterface : mixed)
+     * @return ($subject is non-empty-string ? ResultInterface<array-key, mixed> : mixed)
      */
     private function cached(callable|string $subject, ContextInterface $context, callable $next): mixed
     {

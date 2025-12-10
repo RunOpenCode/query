@@ -164,8 +164,8 @@ final class DatasetFactory
             return null;
         }
 
-        return match ($type) {
-            Types::DATE_IMMUTABLE => new \DateTimeImmutable($value),
+        return match (true) {
+            $type === Types::DATE_IMMUTABLE && \is_string($value) => new \DateTimeImmutable($value),
             default => throw new \InvalidArgumentException(\sprintf(
                 'Unsupported type "%s" for value type "%s" provided.',
                 $type,

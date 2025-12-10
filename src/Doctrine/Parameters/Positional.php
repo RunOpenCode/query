@@ -10,7 +10,7 @@ use Doctrine\DBAL\Types\Types;
 use RunOpenCode\Component\Query\Contract\Executor\ParametersInterface;
 use RunOpenCode\Component\Query\Exception\OutOfBoundsException;
 
-use function RunOpenCode\Component\Query\enum_value;
+use function RunOpenCode\Component\Query\enum_to_scalar;
 use function RunOpenCode\Component\Query\to_date_time_immutable;
 
 /**
@@ -391,7 +391,7 @@ final class Positional implements ParametersInterface
      */
     public function enum(?\UnitEnum $value): self
     {
-        $extracted = enum_value($value);
+        $extracted = enum_to_scalar($value);
 
         match (true) {
             null === $extracted => $this->add(null),
@@ -517,7 +517,7 @@ final class Positional implements ParametersInterface
         $hasString = false;
 
         foreach ($value as $current) {
-            $extracted = enum_value($current);
+            $extracted = enum_to_scalar($current);
             $hasString = $hasString || \is_string($extracted);
             $values[]  = $extracted;
         }

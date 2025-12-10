@@ -22,7 +22,7 @@ use function RunOpenCode\Component\Query\assert_result_open;
  *
  * @implements ResultInterface<non-negative-int, Row>
  *
- * @implements \IteratorAggregate<Row>
+ * @implements \IteratorAggregate<non-negative-int, Row>
  */
 final class Result implements \IteratorAggregate, ResultInterface
 {
@@ -77,7 +77,7 @@ final class Result implements \IteratorAggregate, ResultInterface
         try {
             $value = Stream::create($this->dataset->vector())->collect(ListCollector::class)->value;
 
-            return 0 === \count($value) && \array_key_exists(0, $default) ? $default[0] : $value;
+            return 0 === \count($value) && \array_key_exists(0, $default) ? $default[0] : $value; // @phpstan-ignore-line
         } finally {
             $this->free();
         }
@@ -115,6 +115,7 @@ final class Result implements \IteratorAggregate, ResultInterface
      */
     public function free(): void
     {
+        // @phpstan-ignore-next-line
         if (!isset($this->dataset)) {
             return;
         }

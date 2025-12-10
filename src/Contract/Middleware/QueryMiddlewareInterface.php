@@ -10,7 +10,10 @@ use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
 /**
  * Middleware for query execution.
  *
- * @phpstan-type Next = callable(non-empty-string, QueryContextInterface): ResultInterface
+ * @template TKey of array-key = array-key
+ * @template TValue of mixed = mixed
+ *
+ * @phpstan-type Next = callable(non-empty-string, QueryContextInterface): ResultInterface<array-key, mixed>
  */
 interface QueryMiddlewareInterface
 {
@@ -21,7 +24,7 @@ interface QueryMiddlewareInterface
      * @param QueryContextInterface $context Query execution context.
      * @param Next                  $next    Next middleware to call.
      *
-     * @return ResultInterface Result of query execution.
+     * @return ResultInterface<TKey, TValue> Result of query execution.
      */
     public function query(string $query, QueryContextInterface $context, callable $next): ResultInterface;
 }

@@ -8,6 +8,7 @@ use RunOpenCode\Component\Query\Contract\Context\QueryContextInterface;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
 use RunOpenCode\Component\Query\Contract\Middleware\QueryMiddlewareInterface;
 use RunOpenCode\Component\Query\Doctrine\Dbal\Adapter;
+use RunOpenCode\Component\Query\Doctrine\Dbal\DatasetInterface;
 use RunOpenCode\Component\Query\Exception\LogicException;
 use RunOpenCode\Component\Query\Executor\AdapterRegistry;
 
@@ -16,6 +17,7 @@ use RunOpenCode\Component\Query\Executor\AdapterRegistry;
  *
  * @phpstan-import-type DbalColumnType from Convert
  * @phpstan-import-type DbalColumCustomConverter from Convert
+ * @phpstan-import-type Row from DatasetInterface
  */
 final readonly class ConvertMiddleware implements QueryMiddlewareInterface
 {
@@ -28,7 +30,7 @@ final readonly class ConvertMiddleware implements QueryMiddlewareInterface
      */
     public function query(string $query, QueryContextInterface $context, callable $next): ResultInterface
     {
-        $result        = $next($query);
+        $result        = $next($query, $context);
         $configuration = $context->require(Convert::class);
 
         if (null === $configuration) {
@@ -51,6 +53,7 @@ final readonly class ConvertMiddleware implements QueryMiddlewareInterface
 
         $platform = $adapter->connection->getDatabasePlatform();
 
+        /** @var ResultInterface<array-key, Row> $result */
         return new Converted($result, $configuration, $platform);
     }
 }

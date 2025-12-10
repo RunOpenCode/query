@@ -72,7 +72,7 @@ final readonly class ExecutorMiddleware implements QueryMiddlewareInterface, Sta
      * @param StatementContextInterface|QueryContextInterface $context Middleware query or statement execution context.
      * @param 'query'|'statement'                             $method  Adapter method to invoke.
      *
-     * @return ($method is 'query' ? ResultInterface : AffectedInterface)
+     * @return ($method is 'query' ? ResultInterface<array-key, mixed> : AffectedInterface)
      */
     private function execute(string $query, StatementContextInterface|QueryContextInterface $context, string $method): ResultInterface|AffectedInterface
     {

@@ -20,6 +20,9 @@ use RunOpenCode\Component\Query\Exception\NonUniqueResultException;
 use RunOpenCode\Component\Query\Exception\NoResultException;
 use RunOpenCode\Component\Query\Tests\PHPUnit\DbalTools;
 
+/**
+ * @phpstan-type InternalAssert = 'assertBoolean'|'assertFloat'|'assertImmutableDateTime'
+ */
 final class ConvertedTest extends TestCase
 {
     use DbalTools;
@@ -51,7 +54,7 @@ final class ConvertedTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{string, Convert, mixed, string}>
+     * @return iterable<string, array{string, Convert, mixed, InternalAssert}>
      */
     public static function get_data_for_scalar(): iterable
     {
@@ -112,11 +115,16 @@ final class ConvertedTest extends TestCase
         $result->scalar();
     }
 
+    /**
+     * @param mixed[]        $expected
+     * @param InternalAssert $assert
+     */
     #[Test]
     #[DataProvider('get_data_for_vector')]
-    public function vector(string $query, Convert $configuration, mixed $expected, string $assert): void
+    public function vector(string $query, Convert $configuration, array $expected, string $assert): void
     {
         $result = $this->executeQuery($query, $configuration);
+        /** @var mixed[] $vector */
         $vector = $result->vector();
 
         $this->assertCount(\count($expected), $vector);
@@ -125,14 +133,14 @@ final class ConvertedTest extends TestCase
             match ($assert) {
                 'assertBoolean' => $this->assertBoolean($expected[$index], $vector[$index]),
                 'assertFloat' => $this->assertFloat($expected[$index], $vector[$index]),
-                'assertImmutableDateTime' => $this->assertImmutableDateTime($expected[$index], $vector[$index]),
+                'assertImmutableDateTime' => $this->assertImmutableDateTime($expected[$index], $vector[$index]), // @phpstan-ignore-line match.alwaysTrue
                 default => $this->fail(\sprintf('Provided assert function "%s" is unsupported.', $assert)),
             };
         }
     }
 
     /**
-     * @return iterable<string, array{string, mixed}>
+     * @return iterable<string, array{non-empty-string, Convert, mixed[], InternalAssert}>
      */
     public static function get_data_for_vector(): iterable
     {
@@ -174,6 +182,9 @@ final class ConvertedTest extends TestCase
     #[Test]
     public function record(): void
     {
+        /**
+         * @var array<non-empty-string, mixed> $record
+         */
         $record = $this->executeQuery(
             'SELECT * FROM conversion WHERE id = 1',
             new Convert()
@@ -262,20 +273,36 @@ final class ConvertedTest extends TestCase
         );
     }
 
-    private function assertBoolean(bool $expected, mixed $actual): void
+    private function assertBoolean(mixed $expected, mixed $actual): void
     {
+        \assert(\is_bool($expected), new \InvalidArgumentException(\sprintf(
+            'Expected boolean, got "%s".',
+            \get_debug_type($expected)
+        )));
+
         $this->assertIsBool($actual);
         $this->assertSame($expected, $actual);
     }
 
-    private function assertFloat(float $expected, mixed $actual): void
+    private function assertFloat(mixed $expected, mixed $actual): void
     {
+        \assert(\is_float($expected), new \InvalidArgumentException(\sprintf(
+            'Expected float, got "%s".',
+            \get_debug_type($expected)
+        )));
+
         $this->assertIsFloat($actual);
         $this->assertEqualsWithDelta($expected, $actual, 0.1);
     }
 
-    private function assertImmutableDateTime(\DateTimeInterface $expected, mixed $actual): void
+    private function assertImmutableDateTime(mixed $expected, mixed $actual): void
     {
+        \assert($expected instanceof \DateTimeImmutable, new \InvalidArgumentException(\sprintf(
+            'Expected instance of "%s", got "%s".',
+            \DateTimeImmutable::class,
+            \get_debug_type($expected)
+        )));
+
         $this->assertInstanceOf(\DateTimeImmutable::class, $actual);
         $this->assertSame(
             $expected->format(\DateTimeInterface::ATOM),

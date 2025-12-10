@@ -65,7 +65,7 @@ final class ExecutorTest extends TestCase
             'id'          => 1,
             'title'       => 'Title 1',
             'description' => 'Description 1',
-        ], $result->record()); // @phpstan-ignore-line
+        ], $result->record());
     }
 
     #[Test]
@@ -79,7 +79,7 @@ final class ExecutorTest extends TestCase
             'id'          => 1,
             'title'       => 'Title 1',
             'description' => 'Description 1',
-        ], $result->record()); // @phpstan-ignore-line
+        ], $result->record());
     }
 
     #[Test]
@@ -159,7 +159,7 @@ final class ExecutorTest extends TestCase
             'id'          => 42,
             'title'       => 'foo',
             'description' => 'bar',
-        ], $result->record()); // @phpstan-ignore-line
+        ], $result->record());
     }
 
     #[Test]

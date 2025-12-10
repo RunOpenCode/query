@@ -45,7 +45,7 @@ function assert_default_value(mixed ...$default): void
  *
  * You may utilise these functions in implementation of {@see ResultInterface}.
  *
- * @param ResultInterface $result Result set being checked.
+ * @param ResultInterface<array-key, mixed> $result Result set being checked.
  */
 function assert_result_open(ResultInterface $result): void
 {
@@ -88,7 +88,7 @@ function to_date_time_immutable(?\DateTimeInterface $date): ?\DateTimeImmutable
  *
  * @return int|string|null Extracted enumeration value, or NULL, if NULL is provided.
  */
-function enum_value(?\UnitEnum $value): int|string|null
+function enum_to_scalar(?\UnitEnum $value): int|string|null
 {
     if (!$value instanceof \UnitEnum) {
         return null;
@@ -98,6 +98,66 @@ function enum_value(?\UnitEnum $value): int|string|null
 
     // @phpstan-ignore-next-line
     return $reflection->isBacked() ? $value->value : $value->name;
+}
+
+/**
+ * Transform scalar value to enum.
+ *
+ * @param int|string|null         $scalar Value to transform to enum.
+ * @param class-string<\UnitEnum> $enum   Enum type to use for casting.
+ *
+ * @return \UnitEnum|null
+ */
+function scalar_to_enum(int|string|null $scalar, string $enum): ?\UnitEnum
+{
+    if (null === $scalar) {
+        return null;
+    }
+
+    /**
+     * Use local memory cache for fast successive enum resolution.
+     *
+     * @var array<class-string<\UnitEnum>, array{'int'|'string'|null, array<int|string, \UnitEnum>}>|null $metadata
+     */
+    static $metadata;
+
+    if (!isset($metadata)) {
+        $metadata = [];
+    }
+
+    if (!isset($metadata[$enum])) {
+        $reflection = new \ReflectionEnum($enum);
+        $backed     = $reflection->isBacked();
+        $type       = $backed ? $reflection->getBackingType()->getName() : null; // @phpstan-ignore-line
+        $values     = [];
+
+        foreach ($enum::cases() as $case) {
+            /**
+             * @var ($backed is true ? \BackedEnum : \UnitEnum) $case
+             * @var string|int                                  $value
+             * @phpstan-ignore-next-line
+             */
+            $value          = $backed ? $case->value : $case->name;
+            $values[$value] = $case;
+        }
+
+        $metadata[$enum] = [$type, $values];
+    }
+
+    [$type, $values] = $metadata[$enum];
+
+    \assert($type !== 'int' || \is_int($scalar) || \filter_var($scalar, \FILTER_VALIDATE_INT) !== false, new InvalidArgumentException(\sprintf(
+        'Expected scalar value to be provided as integer, or integer string, %s given.',
+        \get_debug_type($scalar)
+    )));
+
+    $scalar = 'int' === $type ? (int)$scalar : $scalar;
+
+    return $values[$scalar] ?? throw new InvalidArgumentException(\sprintf(
+        'Provided scalar value "%s" could not be converted to case of provided enum "%s".',
+        $scalar,
+        $enum,
+    ));
 }
 
 /**
