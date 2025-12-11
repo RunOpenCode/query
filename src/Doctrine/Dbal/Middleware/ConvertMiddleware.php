@@ -30,8 +30,9 @@ final readonly class ConvertMiddleware implements QueryMiddlewareInterface
      */
     public function query(string $query, QueryContextInterface $context, callable $next): ResultInterface
     {
-        $result        = $next($query, $context);
+        // Order matters, configuration must be required prior to execution.
         $configuration = $context->require(Convert::class);
+        $result        = $next($query, $context);
 
         if (null === $configuration) {
             return $result;
