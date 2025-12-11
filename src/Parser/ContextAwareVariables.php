@@ -46,9 +46,9 @@ final readonly class ContextAwareVariables implements VariablesInterface
     /**
      * Create frozen, context aware variable bag.
      *
-     * @param \RunOpenCode\Component\Query\Contract\Context\ContextInterface         $context    Execution context.
-     * @param VariablesInterface|null  $variables  Variables to use for query/statement parsing.
-     * @param ParametersInterface|null $parameters Parameters to use for query/statement parsing.
+     * @param \RunOpenCode\Component\Query\Contract\Context\ContextInterface $context    Execution context.
+     * @param VariablesInterface|null                                        $variables  Variables to use for query/statement parsing.
+     * @param ParametersInterface|null                                       $parameters Parameters to use for query/statement parsing.
      */
     public function __construct(
         public ContextInterface     $context,
@@ -60,7 +60,7 @@ final readonly class ContextAwareVariables implements VariablesInterface
         $this->parser = $variables?->parser;
         $this->bag    = \array_merge(
             $params,
-            $variables instanceof \RunOpenCode\Component\Query\Contract\Parser\VariablesInterface ? \iterator_to_array($variables) : [],
+            $variables instanceof VariablesInterface ? \iterator_to_array($variables) : [],
             [
                 'variables'  => $variables,
                 'parameters' => $parameters,

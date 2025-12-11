@@ -57,6 +57,14 @@ final class Variables implements VariablesInterface
     }
 
     /**
+     * Create new variable bag for file parser.
+     */
+    public static function file(): self
+    {
+        return new self(FileParser::NAME);
+    }
+
+    /**
      * Create new variables bag for twig parser.
      *
      * @param array<non-empty-string, mixed> $variables Variables to register.
