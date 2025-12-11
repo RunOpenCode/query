@@ -15,6 +15,8 @@ use RunOpenCode\Component\Query\Tests\Fixtures\Log\BufferingLogger;
  */
 final class MySqlFactory
 {
+    private const int MAX_ATTEMPTS = 15;
+
     private static self $instance;
 
     public static function instance(): self
@@ -37,14 +39,32 @@ final class MySqlFactory
 
         $configuration->setMiddlewares([new DbalLoggingMiddleware($logger)]);
 
-        $connection = DriverManager::getConnection([
-            'driver'   => 'mysqli',
-            'dbname'   => $database->value,
-            'user'     => 'roc',
-            'password' => 'roc',
-            'host'     => 'mysql.local',
-        ], $configuration);
+        for ($i = 0; $i < self::MAX_ATTEMPTS; ++$i) {
+            $connection = DriverManager::getConnection([
+                'driver'   => 'mysqli',
+                'dbname'   => $database->value,
+                'user'     => 'roc',
+                'password' => 'roc',
+                'host'     => 'mysql.local',
+            ], $configuration);
 
-        return [$connection, $logger];
+            if (!$connection->isConnected()) {
+                return [$connection, $logger];
+            }
+
+            try {
+                $connection->getServerVersion();
+
+                return [$connection, $logger];
+            } catch (\Exception) {
+                \sleep(1);
+            }
+        }
+
+        throw new \RuntimeException(\sprintf(
+            'Unable to connect to database "%s" after %d attempts.',
+            $database->value,
+            self::MAX_ATTEMPTS,
+        ));
     }
 }
