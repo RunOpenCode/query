@@ -15,7 +15,7 @@ use RunOpenCode\Component\Query\Tests\Fixtures\Log\BufferingLogger;
  */
 final class MySqlFactory
 {
-    private const int MAX_ATTEMPTS = 15;
+    private const int MAX_ATTEMPTS = 60;
 
     private static self $instance;
 
