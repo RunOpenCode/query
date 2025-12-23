@@ -63,13 +63,17 @@ final class Converted implements \IteratorAggregate, ResultInterface
     {
         assert_default_value(...$default);
 
-        return Stream::create($this->result)
-                     ->take(2)
-                     ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
-                     ->map(static fn(array $row): array => [\array_key_first($row) => array_first($row)])
-                     ->map($this->convert(...)) // @phpstan-ignore-line
-                     ->ifEmpty(static fn(): iterable => \array_key_exists(0, $default) ? [[$default[0]]] : throw new NoResultException('Expected one record in result set, none found.'))
-                     ->reduce(Callback::class, static fn(mixed $carry, array $value): mixed => \array_values($value)[0], null);
+        try {
+            return Stream::create($this->result)
+                         ->take(2)
+                         ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
+                         ->map(static fn(array $row): array => [\array_key_first($row) => array_first($row)])
+                         ->map($this->convert(...)) // @phpstan-ignore-line
+                         ->ifEmpty(new NoResultException('Expected one record in result set, none found.'))
+                         ->reduce(Callback::class, static fn(mixed $carry, array $value): mixed => \array_values($value)[0], null);
+        } catch (NoResultException $exception) {
+            return \array_key_exists(0, $default) ? $default[0] : throw $exception;
+        }
     }
 
     /**
@@ -95,12 +99,16 @@ final class Converted implements \IteratorAggregate, ResultInterface
     {
         assert_default_value(...$default);
 
-        return Stream::create($this->result)
-                     ->take(2)
-                     ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
-                     ->map($this->convert(...))
-                     ->ifEmpty(static fn(): iterable => \array_key_exists(0, $default) ? [$default[0]] : throw new NoResultException('Expected one record in result set, none found.'))
-                     ->collect(ListCollector::class)[0];
+        try {
+            return Stream::create($this->result)
+                         ->take(2)
+                         ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
+                         ->map($this->convert(...))
+                         ->ifEmpty(new NoResultException('Expected one record in result set, none found.'))
+                         ->collect(ListCollector::class)[0];
+        } catch (NoResultException $exception) {
+            return \array_key_exists(0, $default) ? $default[0] : throw $exception;
+        }
     }
 
     /**

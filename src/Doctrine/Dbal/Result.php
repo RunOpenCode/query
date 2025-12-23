@@ -58,9 +58,11 @@ final class Result implements \IteratorAggregate, ResultInterface
         try {
             return Stream::create($this->dataset->vector())
                          ->take(2)
-                         ->ifEmpty(static fn(): iterable => \array_key_exists(0, $default) ? [$default[0]] : throw new NoResultException('Expected one record in result set, none found.'))
                          ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
+                         ->ifEmpty(new NoResultException('Expected one record in result set, none found.'))
                          ->reduce(Callback::class, static fn(mixed $carry, mixed $value): mixed => $value, null);
+        } catch (NoResultException $exception) {
+            return \array_key_exists(0, $default) ? $default[0] : throw $exception;
         } finally {
             $this->free();
         }
@@ -94,9 +96,11 @@ final class Result implements \IteratorAggregate, ResultInterface
         try {
             return Stream::create($this->dataset)
                          ->take(2)
-                         ->ifEmpty(static fn(): iterable => \array_key_exists(0, $default) ? [$default[0]] : throw new NoResultException('Expected one record in result set, none found.'))
                          ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
+                         ->ifEmpty(new NoResultException('Expected one record in result set, none found.'))
                          ->collect(ListCollector::class)[0];
+        } catch (NoResultException $exception) {
+            return \array_key_exists(0, $default) ? $default[0] : throw $exception;
         } finally {
             $this->free();
         }
