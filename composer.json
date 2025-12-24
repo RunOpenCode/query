@@ -14,7 +14,7 @@
         "doctrine/dbal": "^4.0",
         "psr/cache": "^3.0",
         "psr/log": "^2.0|^3.0",
-        "runopencode/dataset": "^0.1.39",
+        "runopencode/dataset": "^0.2",
         "symfony/cache": "^7.0",
         "symfony/finder": "^7.0",
         "thecodingmachine/safe": "^3.3",
@@ -28,10 +28,47 @@
             "src/functions.php"
         ]
     },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../../Component/Dataset",
+            "options": {
+                "symlink": false
+            }
+        },
+        {
+            "type": "path",
+            "url": "../../Component/Bitmask",
+            "options": {
+                "symlink": false
+            }
+        },
+        {
+            "type": "path",
+            "url": "../../Component/Metadata",
+            "options": {
+                "symlink": false
+            }
+        },
+        {
+            "type": "path",
+            "url": "../../Bundle/MetadataBundle",
+            "options": {
+                "symlink": false
+            }
+        },
+        {
+            "type": "path",
+            "url": "../../Bundle/QueryBundle",
+            "options": {
+                "symlink": false
+            }
+        }
+    ],
     "config": {
         "sort-packages": true
     },
-    "version": "0.1.39",
+    "version": "0.2",
     "minimum-stability": "dev",
     "prefer-stable": true
 }
