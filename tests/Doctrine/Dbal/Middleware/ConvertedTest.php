@@ -130,7 +130,7 @@ final class ConvertedTest extends TestCase
 
         $this->assertCount(\count($expected), $vector);
 
-        foreach ($expected as $index => $value) {
+        foreach (\array_keys($expected) as $index) {
             match ($assert) {
                 'assertBoolean' => $this->assertBoolean($expected[$index], $vector[$index]),
                 'assertFloat' => $this->assertFloat($expected[$index], $vector[$index]),

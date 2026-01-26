@@ -176,9 +176,7 @@ final readonly class Adapter implements AdapterInterface
     {
         // Prepare query invocation closure.
         $invocation = static function(Connection $connection) use ($query, $configuration, $parameters): ResultInterface {
-            \assert(null !== $configuration->connection, new LogicException(\sprintf(
-                'Connection must be provided in execution configuration.'
-            )));
+            \assert(null !== $configuration->connection, new LogicException('Connection must be provided in execution configuration.'));
 
             return new Result(new DbalDataset($configuration->connection, $connection->executeQuery(
                 $query,
@@ -197,9 +195,7 @@ final readonly class Adapter implements AdapterInterface
     {
         // Prepare statement invocation closure.
         $invocation = static function(Connection $connection) use ($query, $configuration, $parameters): AffectedInterface {
-            \assert(null !== $configuration->connection, new LogicException(\sprintf(
-                'Connection must be provided in execution configuration.'
-            )));
+            \assert(null !== $configuration->connection, new LogicException('Connection must be provided in execution configuration.'));
 
             /** @var non-negative-int $affected */
             $affected = (int)$connection->executeStatement(

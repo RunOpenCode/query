@@ -30,5 +30,7 @@ final class ToRegexTest extends TestCase
         yield '*.twig, @foo/bar.sql.twig' => ['*.twig', '@foo/bar.sql.twig', false];
         yield '*.twig, foo.sql.twig' => ['*.twig', 'foo.sql.twig', true];
         yield '**/*.twig, @foo/bar.sql.twig' => ['**/*.twig', '@foo/bar.sql.twig', true];
+        // Fixed in @see https://github.com/symfony/symfony/issues/62737
+        yield '**/*.twig, foo.sql.twig' => ['**/*.twig', 'foo.sql.twig', true];
     }
 }

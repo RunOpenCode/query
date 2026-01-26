@@ -74,8 +74,6 @@ function enum_to_scalar(?\UnitEnum $value): int|string|null
  *
  * @param int|string|null         $scalar Value to transform to enum.
  * @param class-string<\UnitEnum> $enum   Enum type to use for casting.
- *
- * @return \UnitEnum|null
  */
 function scalar_to_enum(int|string|null $scalar, string $enum): ?\UnitEnum
 {
