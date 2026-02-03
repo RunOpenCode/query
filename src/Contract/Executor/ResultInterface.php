@@ -92,7 +92,7 @@ interface ResultInterface extends \Traversable
      *
      * @param bool $nullify Instead of returning empty iterable, return NULL.
      *
-     * @return ($nullify is true ? iterable<scalar|object>|null : iterable<scalar|object>) Iterable of scalar values (or value objects), or NULL, if $nullify is TRUE and no results found.
+     * @return ($nullify is true ? iterable<non-negative-int, scalar|object>|null : iterable<non-negative-int, scalar|object>) Iterable of scalar values (or value objects), or NULL, if $nullify is TRUE and no results found.
      *
      * @throws InvalidArgumentException If more than one default value is provided.
      * @throws DriverException If there is a underlying driver error.
@@ -127,6 +127,8 @@ interface ResultInterface extends \Traversable
      *
      * Iterates through all records and place them into an array. Preserves
      * yielded array keys.
+     *
+     * This is not a memory safe operation.
      *
      * @return array<TKey, TRecord> All records as array.
      *

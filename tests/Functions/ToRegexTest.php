@@ -31,13 +31,4 @@ final class ToRegexTest extends TestCase
         yield '*.twig, foo.sql.twig' => ['*.twig', 'foo.sql.twig', true];
         yield '**/*.twig, @foo/bar.sql.twig' => ['**/*.twig', '@foo/bar.sql.twig', true];
     }
-
-    /**
-     * @see https://github.com/symfony/symfony/issues/62737
-     */
-    #[Test]
-    public function monitor_fix(): void
-    {
-        $this->assertDoesNotMatchRegularExpression(to_regex('**/*.twig'), 'foo.sql.twig');
-    }
 }

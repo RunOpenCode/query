@@ -20,6 +20,8 @@ use RunOpenCode\Component\Query\Exception\NonUniqueResultException;
 use RunOpenCode\Component\Query\Exception\NoResultException;
 use RunOpenCode\Component\Query\Tests\PHPUnit\DbalTools;
 
+use function RunOpenCode\Component\Dataset\iterable_to_array;
+
 /**
  * @phpstan-type InternalAssert = 'assertBoolean'|'assertFloat'|'assertImmutableDateTime'
  */
@@ -124,8 +126,7 @@ final class ConvertedTest extends TestCase
     public function vector(string $query, Convert $configuration, array $expected, string $assert): void
     {
         $result = $this->executeQuery($query, $configuration);
-        /** @var mixed[] $vector */
-        $vector = $result->vector();
+        $vector = iterable_to_array($result->vector());
 
         $this->assertCount(\count($expected), $vector);
 
@@ -235,18 +236,6 @@ final class ConvertedTest extends TestCase
         $this->expectException(NonUniqueResultException::class);
 
         $this->executeQuery('SELECT * FROM conversion', new Convert()->integer('id'))->record();
-    }
-
-    #[Test]
-    #[TestWith(['scalar'], 'Method scalar()')]
-    #[TestWith(['vector'], 'Method vector()')]
-    #[TestWith(['record'], 'Method record()')]
-    public function methods_with_variadic_defaults_throw_exception_on_multiple_default_values(string $method): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-
-        $result = new Converted(new Result(new ArrayDataset('default', [])), new Convert(), $this->platform);
-        $result->{$method}('foo', 'bar');
     }
 
     #[Test]

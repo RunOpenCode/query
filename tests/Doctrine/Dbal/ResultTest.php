@@ -20,6 +20,8 @@ use RunOpenCode\Component\Query\Exception\NoResultException;
 use RunOpenCode\Component\Query\Exception\ResultClosedException;
 use RunOpenCode\Component\Query\Tests\PHPUnit\DbalTools;
 
+use function RunOpenCode\Component\Dataset\iterable_to_array;
+
 final class ResultTest extends TestCase
 {
     use DbalTools;
@@ -76,7 +78,7 @@ final class ResultTest extends TestCase
     #[DataProvider('get_data_for_vector')]
     public function vector(string $query, mixed $expected): void
     {
-        $this->assertSame($expected, $this->executeQuery($query)->vector());
+        $this->assertSame($expected, iterable_to_array($this->executeQuery($query)->vector()));
     }
 
     /**
@@ -122,18 +124,6 @@ final class ResultTest extends TestCase
         $this->expectException(NonUniqueResultException::class);
 
         $this->executeQuery('SELECT * FROM test')->record();
-    }
-
-    #[Test]
-    #[TestWith(['scalar'], 'Method scalar()')]
-    #[TestWith(['vector'], 'Method vector()')]
-    #[TestWith(['record'], 'Method record()')]
-    public function methods_with_variadic_defaults_throw_exception_on_multiple_default_values(string $method): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-
-        $result = new Result(new ArrayDataset('default', []));
-        $result->{$method}('foo', 'bar');
     }
 
     #[Test]

@@ -37,7 +37,7 @@ interface DatasetInterface extends \IteratorAggregate
      *
      * Retrieves a vector of scalar values.
      *
-     * @return iterable<scalar|null> List of scalar values.
+     * @return iterable<mixed, scalar|null> List of scalar values.
      *
      * @throws DriverException If there is a underlying driver error.
      * @throws RuntimeException If unexpected error occurs during result retrieval.

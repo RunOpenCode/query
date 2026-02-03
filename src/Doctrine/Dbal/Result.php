@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RunOpenCode\Component\Query\Doctrine\Dbal;
 
 use RunOpenCode\Component\Dataset\Collector\ListCollector;
-use RunOpenCode\Component\Dataset\Reducer\Count;
 use RunOpenCode\Component\Dataset\Stream;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
 use RunOpenCode\Component\Query\Doctrine\Dbal\Dataset\ArrayDataset;
@@ -79,19 +78,22 @@ final class Result implements \IteratorAggregate, ResultInterface
     {
         assert_result_open($this);
 
-        $stream = Stream::create($this->dataset->vector())->aggregate('count', Count::class);
+        $iterator = Stream::create($this->dataset->vector())->getIterator();
+        $first    = null;
 
-        foreach ($stream as $key => $value) {
-            yield $key => $value; // @phpstan-ignore-line
+        foreach ($iterator as $key => $value) {
+            $first = static fn(): iterable => yield $key => $value;
+            break;
         }
 
-        $this->free();
-
-        if (0 !== $stream->aggregated['count'] && !$nullify) {
-            return;
+        if (null === $first) {
+            $this->free();
+            return $nullify ? null : [];
         }
 
-        return null;
+        return Stream::create($first())
+                     ->merge($iterator)
+                     ->finalize($this->free(...));
     }
 
     /**

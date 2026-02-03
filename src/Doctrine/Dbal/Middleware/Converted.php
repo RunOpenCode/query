@@ -7,7 +7,6 @@ namespace RunOpenCode\Component\Query\Doctrine\Dbal\Middleware;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\Type;
 use RunOpenCode\Component\Dataset\Collector\ListCollector;
-use RunOpenCode\Component\Dataset\Reducer\Count;
 use RunOpenCode\Component\Dataset\Stream;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
 use RunOpenCode\Component\Query\Doctrine\Dbal\Dataset\ArrayDataset;
@@ -63,7 +62,7 @@ final class Converted implements \IteratorAggregate, ResultInterface
     {
         assert_result_open($this);
 
-        /** @var list<scalar|object> $values */
+        /** @var list<array<array-key, scalar|object>> $values */
         $values = Stream::create($this->result)
                         ->take(2)
                         ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
@@ -74,7 +73,7 @@ final class Converted implements \IteratorAggregate, ResultInterface
         $this->free();
 
         if (1 === \count($values)) {
-            return $values[0];
+            return array_first($values[0]);
         }
 
         if ($nullify) {
@@ -91,23 +90,26 @@ final class Converted implements \IteratorAggregate, ResultInterface
     {
         assert_result_open($this);
 
-        $stream = Stream::create($this->result)
-                        ->map(static fn(array $row): array => [\array_key_first($row) => array_first($row)])
-                        ->map($this->convert(...)) // @phpstan-ignore-line
-                        ->map(static fn(array $row): mixed => array_first($row))
-                        ->aggregate('count', Count::class);
+        $iterator = Stream::create($this->result)
+                          ->map(static fn(array $row): array => [\array_key_first($row) => array_first($row)])
+                          ->map($this->convert(...)) // @phpstan-ignore-line
+                          ->map(static fn(array $row): mixed => array_first($row))
+                          ->getIterator();
+        $first    = null;
 
-        foreach ($stream as $key => $value) {
-            yield $key => $value; // @phpstan-ignore-line
+        foreach ($iterator as $key => $value) {
+            $first = static fn(): iterable => yield $key => $value;
+            break;
         }
 
-        $this->free();
-
-        if (0 !== $stream->aggregated['count'] && !$nullify) {
-            return;
+        if (null === $first) {
+            $this->free();
+            return $nullify ? null : [];
         }
 
-        return null;
+        return Stream::create($first())
+                     ->merge($iterator)
+                     ->finalize($this->free(...));
     }
 
     /**
