@@ -51,6 +51,20 @@ interface ResultInterface extends \Traversable
     public bool $closed {
         get;
     }
+    
+    /**
+     * Exposes source of the result set.
+     * 
+     * Upstream exposes the underlying data source or mechanism
+     * that produced the result set. This could be a database connection,
+     * a file handle, an API client, or any other relevant source.
+     * 
+     * In case of implementation of decorator, this should expose
+     * the upstream decorated result set.
+     */
+    public mixed $upstream {
+        get;
+    }
 
     /**
      * Get single scalar.

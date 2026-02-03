@@ -35,6 +35,13 @@ final class Result implements \IteratorAggregate, ResultInterface
     public private(set) bool $closed = false;
 
     /**
+     * {@inheritdoc}
+     */
+    public mixed $upstream {
+        get => $this->dataset;
+    }
+
+    /**
      * Create new result set from data set retrieved by Doctrine Dbal.
      *
      * @param DatasetInterface $dataset Data set, retrieved by Doctrine Dbal.

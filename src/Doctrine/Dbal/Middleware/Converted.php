@@ -41,6 +41,13 @@ final class Converted implements \IteratorAggregate, ResultInterface
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public mixed $upstream {
+        get => $this->result;
+    }
+
+    /**
      * Create result set with converted values.
      *
      * @param ResultInterface<non-negative-int, Row> $result        Result to convert values.
