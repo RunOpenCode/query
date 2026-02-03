@@ -72,7 +72,7 @@ final readonly class ExecutorMiddleware implements QueryMiddlewareInterface, Sta
      * @param StatementContextInterface|QueryContextInterface $context Middleware query or statement execution context.
      * @param 'query'|'statement'                             $method  Adapter method to invoke.
      *
-     * @return ($method is 'query' ? ResultInterface<array-key, mixed> : AffectedInterface)
+     * @return ($method is 'query' ? ResultInterface<array-key, mixed[]|object> : AffectedInterface)
      */
     private function execute(string $query, StatementContextInterface|QueryContextInterface $context, string $method): ResultInterface|AffectedInterface
     {
@@ -80,7 +80,7 @@ final readonly class ExecutorMiddleware implements QueryMiddlewareInterface, Sta
         $parameters = $context->require(ParametersInterface::class);
         $scope      = $context->execution->scope ?? ExecutionScope::Strict;
 
-        if ($context->transaction instanceof \RunOpenCode\Component\Query\Contract\Context\TransactionContextInterface && !$context->transaction->accepts($scope, $adapter->name)) {
+        if ($context->transaction instanceof TransactionContextInterface && !$context->transaction->accepts($scope, $adapter->name)) {
             throw new LogicException(\sprintf(
                 'Execution of %s using connection "%s" within current transaction violates current execution scope configuration "%s".',
                 $method,

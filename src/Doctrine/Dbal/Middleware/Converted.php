@@ -7,7 +7,7 @@ namespace RunOpenCode\Component\Query\Doctrine\Dbal\Middleware;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\Type;
 use RunOpenCode\Component\Dataset\Collector\ListCollector;
-use RunOpenCode\Component\Dataset\Reducer\Callback;
+use RunOpenCode\Component\Dataset\Reducer\Count;
 use RunOpenCode\Component\Dataset\Stream;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
 use RunOpenCode\Component\Query\Doctrine\Dbal\Dataset\ArrayDataset;
@@ -17,15 +17,15 @@ use RunOpenCode\Component\Query\Exception\NonUniqueResultException;
 use RunOpenCode\Component\Query\Exception\NoResultException;
 use RunOpenCode\Component\Query\Exception\ResultClosedException;
 
-use function RunOpenCode\Component\Query\assert_default_value;
+use function RunOpenCode\Component\Query\assert_result_open;
 
 /**
  * Result set with converted column values according to provided conversion functions.
  *
  * @phpstan-import-type Row from DatasetInterface
  *
- * @implements ResultInterface<non-negative-int, mixed>
- * @implements \IteratorAggregate<non-negative-int, mixed>
+ * @implements ResultInterface<non-negative-int, array<non-empty-string, mixed>>
+ * @implements \IteratorAggregate<non-negative-int, array<non-empty-string, mixed>>
  */
 final class Converted implements \IteratorAggregate, ResultInterface
 {
@@ -59,56 +59,81 @@ final class Converted implements \IteratorAggregate, ResultInterface
     /**
      * {@inheritdoc}
      */
-    public function scalar(...$default): mixed
+    public function scalar(bool $nullify = false): int|float|string|object|bool|null
     {
-        assert_default_value(...$default);
+        assert_result_open($this);
 
-        try {
-            return Stream::create($this->result)
-                         ->take(2)
-                         ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
-                         ->map(static fn(array $row): array => [\array_key_first($row) => array_first($row)])
-                         ->map($this->convert(...)) // @phpstan-ignore-line
-                         ->ifEmpty(new NoResultException('Expected one record in result set, none found.'))
-                         ->reduce(Callback::class, static fn(mixed $carry, array $value): mixed => \array_values($value)[0], null);
-        } catch (NoResultException $exception) {
-            return \array_key_exists(0, $default) ? $default[0] : throw $exception;
+        /** @var list<scalar|object> $values */
+        $values = Stream::create($this->result)
+                        ->take(2)
+                        ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
+                        ->map(static fn(array $row): array => [\array_key_first($row) => array_first($row)])
+                        ->map($this->convert(...)) // @phpstan-ignore-line
+                        ->collect(ListCollector::class)->value;
+
+        $this->free();
+
+        if (1 === \count($values)) {
+            return $values[0];
         }
+
+        if ($nullify) {
+            return null;
+        }
+
+        throw new NoResultException('Expected one record in result set, none found.');
     }
 
     /**
      * {@inheritdoc}
      */
-    public function vector(...$default): mixed
+    public function vector(bool $nullify = false): ?iterable
     {
-        assert_default_value(...$default);
+        assert_result_open($this);
 
-        $value = Stream::create($this->result)
-                       ->map(static fn(array $row): array => [\array_key_first($row) => array_first($row)])
-                       ->map($this->convert(...)) // @phpstan-ignore-line
-                       ->map(static fn(array $row): mixed => array_first($row))
-                       ->collect(ListCollector::class)->value;
+        $stream = Stream::create($this->result)
+                        ->map(static fn(array $row): array => [\array_key_first($row) => array_first($row)])
+                        ->map($this->convert(...)) // @phpstan-ignore-line
+                        ->map(static fn(array $row): mixed => array_first($row))
+                        ->aggregate('count', Count::class);
 
-        return 0 === \count($value) && \array_key_exists(0, $default) ? $default[0] : $value; // @phpstan-ignore-line
+        foreach ($stream as $key => $value) {
+            yield $key => $value; // @phpstan-ignore-line
+        }
+
+        $this->free();
+
+        if (0 !== $stream->aggregated['count'] && !$nullify) {
+            return;
+        }
+
+        return null;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function record(...$default): mixed
+    public function record(bool $nullify = false): object|array|null
     {
-        assert_default_value(...$default);
+        assert_result_open($this);
 
-        try {
-            return Stream::create($this->result)
-                         ->take(2)
-                         ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
-                         ->map($this->convert(...))
-                         ->ifEmpty(new NoResultException('Expected one record in result set, none found.'))
-                         ->collect(ListCollector::class)[0];
-        } catch (NoResultException $exception) {
-            return \array_key_exists(0, $default) ? $default[0] : throw $exception;
+        $values = Stream::create($this->result)
+                        ->take(2)
+                        ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
+                        ->map($this->convert(...))
+                        ->collect(ListCollector::class)->value;
+
+        $this->free();
+
+        if (1 === \count($values)) {
+            return $values[0]; // @phpstan-ignore-line return.type
         }
+
+        if ($nullify) {
+            return null;
+        }
+
+        throw new NoResultException('Expected one record in result set, none found.');
     }
 
     /**

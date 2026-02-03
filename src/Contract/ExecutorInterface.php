@@ -23,7 +23,7 @@ use RunOpenCode\Component\Query\Exception\UnsupportedException;
  * transactional scope.
  *
  * @template TKey of array-key = array-key
- * @template TValue of mixed = mixed
+ * @template TValue of mixed[]|object = mixed[]|object
  * @template TAffected of AffectedInterface = AffectedInterface
  */
 interface ExecutorInterface

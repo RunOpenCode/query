@@ -51,9 +51,9 @@ final class ResultTest extends TestCase
     }
 
     #[Test]
-    public function scalar_returns_default_when_no_results(): void
+    public function scalar_returns_null_when_no_results_and_nullify_is_true(): void
     {
-        $this->assertSame(42, $this->executeQuery('SELECT id FROM test WHERE id = -1')->scalar(42));
+        $this->assertNull($this->executeQuery('SELECT id FROM test WHERE id = -1')->scalar(true));
     }
 
     #[Test]
@@ -91,9 +91,9 @@ final class ResultTest extends TestCase
     }
 
     #[Test]
-    public function vector_returns_default_when_no_results(): void
+    public function vector_returns_null_when_no_results_and_nullify_is_true(): void
     {
-        $this->assertSame(['foo', 'bar'], $this->executeQuery('SELECT id FROM test WHERE id = -1')->vector(['foo', 'bar']));
+        $this->assertNull($this->executeQuery('SELECT id FROM test WHERE id = -1')->vector(true));
     }
 
     #[Test]
@@ -103,9 +103,9 @@ final class ResultTest extends TestCase
     }
 
     #[Test]
-    public function record_returns_default_when_no_results(): void
+    public function record_returns_null_when_no_results_and_nullify_is_true(): void
     {
-        $this->assertSame(['foo', 'bar'], $this->executeQuery('SELECT * FROM test WHERE id = -1')->record(['foo', 'bar']));
+        $this->assertNull($this->executeQuery('SELECT * FROM test WHERE id = -1')->record(true));
     }
 
     #[Test]

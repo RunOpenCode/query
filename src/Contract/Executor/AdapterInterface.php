@@ -28,7 +28,7 @@ use RunOpenCode\Component\Query\Exception\TransactionException;
  *
  * @template TTransaction of TransactionInterface = TransactionInterface
  * @template TConfiguration of ExecutionInterface = ExecutionInterface
- * @template TResult of ResultInterface = ResultInterface
+ * @template TResult of ResultInterface = ResultInterface<array-key, mixed[]|object>
  */
 interface AdapterInterface
 {

@@ -30,7 +30,7 @@ use RunOpenCode\Component\Query\Exception\RuntimeException;
  * becomes closed and {@see ResultClosedException} must be thrown.
  *
  * @template-covariant TKey of array-key = array-key
- * @template-covariant TRecord of mixed = mixed
+ * @template-covariant TRecord of mixed[]|object = mixed[]|object
  *
  * @extends \Traversable<TKey, TRecord>
  */
@@ -62,11 +62,12 @@ interface ResultInterface extends \Traversable
      * single value, such as aggregate functions (e.g., COUNT, SUM) or when
      * querying for a specific scalar value.
      *
-     * @template TDefault
+     * As value objects may be considered as scalars, this method may also
+     * return objects (e.g. instance of \DateTimeInterface).
      *
-     * @param TDefault ...$default Optional default value to return if no result is found.
+     * @param bool $nullify Instead of throwing NoResultException when no result is found, return NULL.
      *
-     * @return ($default is empty ? scalar|null : scalar|null|TDefault) A single scalar value, or default value, if provided and no result found.
+     * @return ($nullify is true ? scalar|object|null : scalar|object) A single scalar value (or value object), or NULL, if $nullify is TRUE and no result found.
      *
      * @throws InvalidArgumentException If more than one default value is provided.
      * @throws NoResultException If there are no results of executed statement.
@@ -75,29 +76,30 @@ interface ResultInterface extends \Traversable
      * @throws ResultClosedException If result set is closed.
      * @throws RuntimeException If unexpected error occurs during result retrieval.
      */
-    public function scalar(mixed ...$default): mixed;
+    public function scalar(bool $nullify = false): mixed;
 
     /**
      * Get vector of values.
      *
      * Assuming that your result contains multiple records with at least one field,
-     * this method will return a list of values from the first field of each record.
+     * this method will return iterable of values from the first field of each record.
      *
      * This is particularly useful for queries that are expected to return a
-     * list of values, such as when querying for a specific column across multiple rows.
+     * iterable of values, such as when querying for a specific column across multiple rows.
      *
-     * @template TDefault
+     * As value objects may be considered as scalars, this method may also
+     * return iterable of objects (e.g. instances of \DateTimeInterface).
      *
-     * @param TDefault ...$default Optional default value to return if no results are found.
+     * @param bool $nullify Instead of returning empty iterable, return NULL.
      *
-     * @return ($default is empty ? list<scalar|null> : (list<scalar|null>|TDefault)) List of scalar values, or default value if provided and no results found.
+     * @return ($nullify is true ? iterable<scalar|object>|null : iterable<scalar|object>) Iterable of scalar values (or value objects), or NULL, if $nullify is TRUE and no results found.
      *
      * @throws InvalidArgumentException If more than one default value is provided.
      * @throws DriverException If there is a underlying driver error.
      * @throws ResultClosedException If result set is closed.
      * @throws RuntimeException If unexpected error occurs during result retrieval.
      */
-    public function vector(mixed ...$default): mixed;
+    public function vector(bool $nullify = false): ?iterable;
 
     /**
      * Get single record from result set.
@@ -105,11 +107,11 @@ interface ResultInterface extends \Traversable
      * Assuming that your result contains one record with multiple fields,
      * this method will return that record.
      *
-     * @template TDefault
+     * Record may be represented as an object or an associative array.
      *
-     * @param TDefault ...$default Optional default value to return if no results are found.
+     * @param bool $nullify Instead of throwing NoResultException when no result is found, return NULL.
      *
-     * @return ($default is empty ? TRecord : TRecord|TDefault) A single (first) record of result set, or default value if provided and no results found.
+     * @return ($nullify is empty ? TRecord : TRecord|null) A single (first) record of result set, or NULL, if $nullify is TRUE and no results found.
      *
      * @throws InvalidArgumentException If more than one default value is provided.
      * @throws NoResultException If there are no results of executed statement.
@@ -118,7 +120,7 @@ interface ResultInterface extends \Traversable
      * @throws ResultClosedException If result set is closed.
      * @throws RuntimeException If unexpected error occurs during result retrieval.
      */
-    public function record(mixed ...$default): mixed;
+    public function record(bool $nullify = false): object|array|null;
 
     /**
      * Get all records.

@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace RunOpenCode\Component\Query\Doctrine\Dbal;
 
 use RunOpenCode\Component\Dataset\Collector\ListCollector;
-use RunOpenCode\Component\Dataset\Reducer\Callback;
+use RunOpenCode\Component\Dataset\Reducer\Count;
 use RunOpenCode\Component\Dataset\Stream;
 use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
 use RunOpenCode\Component\Query\Doctrine\Dbal\Dataset\ArrayDataset;
 use RunOpenCode\Component\Query\Exception\NonUniqueResultException;
 use RunOpenCode\Component\Query\Exception\NoResultException;
 
-use function RunOpenCode\Component\Query\assert_default_value;
 use function RunOpenCode\Component\Query\assert_result_open;
 
 /**
@@ -50,60 +49,74 @@ final class Result implements \IteratorAggregate, ResultInterface
     /**
      * {@inheritdoc}
      */
-    public function scalar(mixed ...$default): mixed
+    public function scalar(bool $nullify = false): int|float|string|object|bool|null
     {
         assert_result_open($this);
-        assert_default_value(...$default);
 
-        try {
-            return Stream::create($this->dataset->vector())
-                         ->take(2)
-                         ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
-                         ->ifEmpty(new NoResultException('Expected one record in result set, none found.'))
-                         ->reduce(Callback::class, static fn(mixed $carry, mixed $value): mixed => $value, null);
-        } catch (NoResultException $exception) {
-            return \array_key_exists(0, $default) ? $default[0] : throw $exception;
-        } finally {
-            $this->free();
+        /** @var list<scalar|object> $values */
+        $values = Stream::create($this->dataset->vector())
+                        ->take(2)
+                        ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
+                        ->collect(ListCollector::class)->value;
+
+        $this->free();
+
+        if (1 === \count($values)) {
+            return $values[0];
         }
+
+        if ($nullify) {
+            return null;
+        }
+
+        throw new NoResultException('Expected one record in result set, none found.');
     }
 
     /**
      * {@inheritdoc}
      */
-    public function vector(mixed ...$default): mixed
+    public function vector(bool $nullify = false): ?iterable
     {
         assert_result_open($this);
-        assert_default_value(...$default);
 
-        try {
-            $value = Stream::create($this->dataset->vector())->collect(ListCollector::class)->value;
+        $stream = Stream::create($this->dataset->vector())->aggregate('count', Count::class);
 
-            return 0 === \count($value) && \array_key_exists(0, $default) ? $default[0] : $value; // @phpstan-ignore-line
-        } finally {
-            $this->free();
+        foreach ($stream as $key => $value) {
+            yield $key => $value; // @phpstan-ignore-line
         }
+
+        $this->free();
+
+        if (0 !== $stream->aggregated['count'] && !$nullify) {
+            return;
+        }
+
+        return null;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function record(mixed ...$default): mixed
+    public function record(bool $nullify = false): object|array|null
     {
         assert_result_open($this);
-        assert_default_value(...$default);
 
-        try {
-            return Stream::create($this->dataset)
-                         ->take(2)
-                         ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
-                         ->ifEmpty(new NoResultException('Expected one record in result set, none found.'))
-                         ->collect(ListCollector::class)[0];
-        } catch (NoResultException $exception) {
-            return \array_key_exists(0, $default) ? $default[0] : throw $exception;
-        } finally {
-            $this->free();
+        $values = Stream::create($this->dataset)
+                        ->take(2)
+                        ->overflow(1, new NonUniqueResultException('Expected only one record in result set, multiple retrieved.'))
+                        ->collect(ListCollector::class)->value;
+
+        $this->free();
+
+        if (1 === \count($values)) {
+            return $values[0]; // @phpstan-ignore-line return.type
         }
+
+        if ($nullify) {
+            return null;
+        }
+
+        throw new NoResultException('Expected one record in result set, none found.');
     }
 
     /**

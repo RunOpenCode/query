@@ -181,7 +181,7 @@ final class ExecutorTest extends TestCase
             new Replica(),
         );
 
-        $this->assertNull($result->record(null));
+        $this->assertNull($result->record(true));
     }
 
     #[Test]

@@ -11,9 +11,9 @@ use RunOpenCode\Component\Query\Contract\Executor\ResultInterface;
  * Middleware for query execution.
  *
  * @template TKey of array-key = array-key
- * @template TValue of mixed = mixed
+ * @template TValue of mixed[]|object = mixed[]|object
  *
- * @phpstan-type Next = callable(non-empty-string, QueryContextInterface): ResultInterface<array-key, mixed>
+ * @phpstan-type Next = callable(non-empty-string, QueryContextInterface): ResultInterface<array-key, mixed[]|object>
  */
 interface QueryMiddlewareInterface
 {

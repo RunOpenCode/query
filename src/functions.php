@@ -10,42 +10,11 @@ use RunOpenCode\Component\Query\Exception\ResultClosedException;
 use Symfony\Component\Finder\Glob;
 
 /**
- * Assert that at most one default value is provided.
- *
- * This function is utilised for methods:
- *
- * - {@see ResultInterface::scalar()}
- * - {@see ResultInterface::vector()}
- * - {@see ResultInterface::record()}
- *
- * when asserting that if default value is passed to invocation,
- * it is a single value, and it is not passed with name.
- */
-function assert_default_value(mixed ...$default): void
-{
-    if (\count($default) > 1) {
-        throw new InvalidArgumentException(\sprintf(
-            'Expected at most one default value when invoking method "%s" of result set, %d given.',
-            \debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS)[1]['function'],
-            \count($default),
-        ));
-    }
-
-    if (!\array_is_list($default)) {
-        throw new InvalidArgumentException(\sprintf(
-            'Expected default value to be provided without naming argument when invoking method "%s" of result set, "%s" given.',
-            \debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS)[1]['function'],
-            \array_keys($default)[0],
-        ));
-    }
-}
-
-/**
  * Assert that result set is open.
  *
  * You may utilise these functions in implementation of {@see ResultInterface}.
  *
- * @param ResultInterface<array-key, mixed> $result Result set being checked.
+ * @param ResultInterface<array-key, mixed[]|object> $result Result set being checked.
  */
 function assert_result_open(ResultInterface $result): void
 {
