@@ -1,5 +1,5 @@
 {
-    "symbol-whitelist" : ["array_first"],
+    "symbol-whitelist" : ["array_first", "Safe\\preg_match"],
     "scan-files": [
         "vendor/thecodingmachine/safe/generated/8.4/pcre.php"
     ]
