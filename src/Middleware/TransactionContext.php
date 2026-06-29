@@ -163,7 +163,7 @@ final readonly class TransactionContext implements TransactionContextInterface
      */
     public function __clone(): void
     {
-        $this->middlewares    = clone $this->middlewares;  // @phpstan-ignore-line
-        $this->configurations = clone $this->configurations; // @phpstan-ignore-line
+        $this->middlewares    = clone $this->middlewares;
+        $this->configurations = clone $this->configurations;
     }
 }

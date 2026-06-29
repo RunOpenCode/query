@@ -95,7 +95,7 @@ function scalar_to_enum(int|string|null $scalar, string $enum): ?\UnitEnum
     if (!isset($metadata[$enum])) {
         $reflection = new \ReflectionEnum($enum);
         $backed     = $reflection->isBacked();
-        $type       = $backed ? $reflection->getBackingType()->getName() : null; // @phpstan-ignore-line
+        $type       = $backed ? $reflection->getBackingType()->getName() : null;
         $values     = [];
 
         foreach ($enum::cases() as $case) {

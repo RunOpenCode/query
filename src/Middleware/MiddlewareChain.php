@@ -120,6 +120,7 @@ final readonly class MiddlewareChain
         };
 
         foreach ($middlewares as $middleware) {
+            // @phpstan-ignore-next-line instanceof.alwaysTrue
             if (!$middleware instanceof $type) {
                 continue;
             }

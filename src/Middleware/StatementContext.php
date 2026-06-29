@@ -97,7 +97,6 @@ final readonly class StatementContext implements StatementContextInterface
      */
     public function __clone(): void
     {
-        // @phpstan-ignore-next-line
         $this->middlewares = clone $this->middlewares;
     }
 }

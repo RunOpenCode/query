@@ -224,7 +224,6 @@ final readonly class MiddlewaresConfiguration implements MiddlewaresConfiguratio
      */
     public function __clone(): void
     {
-        // @phpstan-ignore-next-line
         $this->registry = clone $this->registry;
     }
 }

@@ -40,7 +40,7 @@ final class VoidParser implements ParserInterface
         if ($variables instanceof ContextAwareVariables && ($variables->variables?->count() ?? 0) > 0) {
             throw new UnsupportedException(\sprintf(
                 'Void parser can not utilize variables, number of variables provided: %d.',
-                $variables->variables->count(), // @phpstan-ignore-line
+                $variables->variables->count(),
             ));
         }
 
