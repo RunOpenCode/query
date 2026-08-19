@@ -54,10 +54,12 @@ final class ContextFactory
      *
      * @param non-empty-string                 $query            Query being executed.
      * @param TransactionContextInterface|null $context          Current transaction context.
-     * @param object                           ...$configuration Provided configurations.
+     * @param object|null                      ...$configuration Provided configurations.
      */
-    public function query(string $query, ?TransactionContextInterface $context, object ...$configuration): QueryContextInterface
+    public function query(string $query, ?TransactionContextInterface $context, ?object ...$configuration): QueryContextInterface
     {
+        $configuration = \array_filter($configuration);
+
         /**
          * @var list<ExecutionInterface>   $execution
          * @var list<TransactionInterface> $transaction
@@ -95,10 +97,12 @@ final class ContextFactory
      *
      * @param non-empty-string                 $statement        Statement being executed.
      * @param TransactionContextInterface|null $context          Current transaction context.
-     * @param object                           ...$configuration Provided configurations.
+     * @param object|null                      ...$configuration Provided configurations.
      */
-    public function statement(string $statement, ?TransactionContextInterface $context, object ...$configuration): StatementContextInterface
+    public function statement(string $statement, ?TransactionContextInterface $context, ?object ...$configuration): StatementContextInterface
     {
+        $configuration = \array_filter($configuration);
+
         /**
          * @var list<ExecutionInterface>   $execution
          * @var list<TransactionInterface> $transaction
@@ -131,8 +135,16 @@ final class ContextFactory
         return new StatementContext($statement, $execution, $context, ...$middleware);
     }
 
-    public function transaction(?TransactionContextInterface $context, object ...$configuration): TransactionContextInterface
+    /**
+     * Create transaction context.
+     *
+     * @param TransactionContextInterface|null $context          Current transaction context.
+     * @param object|null                      ...$configuration Provided configurations.
+     */
+    public function transaction(?TransactionContextInterface $context, ?object ...$configuration): TransactionContextInterface
     {
+        $configuration = \array_filter($configuration);
+
         /**
          * @var list<TransactionInterface> $transaction
          * @var list<ExecutionInterface>   $execution

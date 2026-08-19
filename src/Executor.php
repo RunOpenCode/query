@@ -12,7 +12,6 @@ use RunOpenCode\Component\Query\Executor\AdapterRegistry;
 use RunOpenCode\Component\Query\Executor\TransactionExecutor;
 use RunOpenCode\Component\Query\Middleware\ContextFactory;
 use RunOpenCode\Component\Query\Middleware\MiddlewareChain;
-use RunOpenCode\Component\Query\Middleware\TransactionContext;
 
 /**
  * Default implementation of {@see ExecutorInterface}.
@@ -34,7 +33,7 @@ final class Executor implements ExecutorInterface
     /**
      * {@inheritdoc}
      */
-    public function query(string $query, object ...$configuration): ResultInterface
+    public function query(string $query, ?object ...$configuration): ResultInterface
     {
         if (!$this->current) {
             throw new LogicException('You are invoking method of executor which is not in current transactional scope.');
@@ -48,7 +47,7 @@ final class Executor implements ExecutorInterface
     /**
      * {@inheritdoc}
      */
-    public function statement(string $statement, object ...$configuration): AffectedInterface
+    public function statement(string $statement, ?object ...$configuration): AffectedInterface
     {
         if (!$this->current) {
             throw new LogicException('You are invoking method of executor which is not in current transactional scope.');
@@ -62,7 +61,7 @@ final class Executor implements ExecutorInterface
     /**
      * {@inheritdoc}
      */
-    public function transactional(callable $function, object ...$configuration): mixed
+    public function transactional(callable $function, ?object ...$configuration): mixed
     {
         if (!$this->current) {
             throw new LogicException('You are invoking method of executor which is not in current transactional scope.');

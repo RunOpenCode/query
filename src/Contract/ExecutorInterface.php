@@ -32,7 +32,7 @@ interface ExecutorInterface
      * Execute query through middleware chain.
      *
      * @param non-empty-string $query            Query to execute.
-     * @param object           ...$configuration Configuration objects for middlewares.
+     * @param object|null      ...$configuration Configuration objects for middlewares.
      *
      * @return ResultInterface<TKey, TValue> Result of execution.
      *
@@ -44,13 +44,13 @@ interface ExecutorInterface
      * @throws InvalidArgumentException If middleware configuration is invalid.
      * @throws LogicException If there is a problem with execution logic and requires either reconfiguration or refactoring.
      */
-    public function query(string $query, object ...$configuration): ResultInterface;
+    public function query(string $query, ?object ...$configuration): ResultInterface;
 
     /**
      * Execute statement through middleware chain.
      *
      * @param non-empty-string $statement        Statement to execute.
-     * @param object           ...$configuration Configuration objects for middlewares.
+     * @param object|null      ...$configuration Configuration objects for middlewares.
      *
      * @return TAffected Report about affected database objects.
      *
@@ -62,7 +62,7 @@ interface ExecutorInterface
      * @throws InvalidArgumentException If middleware configuration is invalid.
      * @throws LogicException If there is a problem with execution logic and requires either reconfiguration or refactoring.
      */
-    public function statement(string $statement, object ...$configuration): AffectedInterface;
+    public function statement(string $statement, ?object ...$configuration): AffectedInterface;
 
     /**
      * Execute queries and statements inside transactional scope.
@@ -70,7 +70,7 @@ interface ExecutorInterface
      * @template T
      *
      * @param callable(ExecutorInterface): T $function         Function to be executed inside transactional scope.
-     * @param object                         ...$configuration Transaction configurations, which may be instance of {@see TransactionInterface} to configure for which
+     * @param object|null                    ...$configuration Transaction configurations, which may be instance of {@see TransactionInterface} to configure for which
      *                                                         connection transaction scope should be created or middleware configuration objects.
      *
      * @return T
@@ -84,5 +84,5 @@ interface ExecutorInterface
      * @throws LogicException If there is a problem with execution logic and requires either reconfiguration or refactoring.
      * @throws UnsupportedException If used adapter do not supports transactions.
      */
-    public function transactional(callable $function, object ...$configuration): mixed;
+    public function transactional(callable $function, ?object ...$configuration): mixed;
 }

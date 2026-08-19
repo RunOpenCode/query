@@ -93,6 +93,32 @@ final class ExecutorTest extends TestCase
     }
 
     #[Test]
+    public function query_ignores_null_configuration(): void
+    {
+        $result = $this->executor->query('default_dataset/filter.sql.twig', null, new Named()->integer('id', 1), null);
+
+        $this->assertSame([
+            'id'          => 1,
+            'title'       => 'Title 1',
+            'description' => 'Description 1',
+        ], $result->record());
+    }
+
+    #[Test]
+    public function query_inside_transaction_ignores_null_configuration(): void
+    {
+        $result = $this->executor->transactional(static function(ExecutorInterface $executor): ResultInterface {
+            return $executor->query('default_dataset/filter.sql.twig', null, new Named()->integer('id', 1), null);
+        });
+
+        $this->assertSame([
+            'id'          => 1,
+            'title'       => 'Title 1',
+            'description' => 'Description 1',
+        ], $result->record());
+    }
+
+    #[Test]
     public function statement(): void
     {
         $affected = $this->executor->statement(
@@ -136,6 +162,40 @@ final class ExecutorTest extends TestCase
                     ->string('bar')
             );
         });
+    }
+
+    #[Test]
+    public function statement_ignores_null_configuration(): void
+    {
+        $affected = $this->executor->statement(
+            'default_dataset/insert.sql.twig',
+            null,
+            new Positional()
+                ->integer(42)
+                ->string('foo')
+                ->string('bar'),
+            null,
+        );
+
+        $this->assertCount(1, $affected);
+    }
+
+    #[Test]
+    public function statement_inside_transaction_ignores_null_configuration(): void
+    {
+        $affected = $this->executor->transactional(static function(ExecutorInterface $executor): AffectedInterface {
+            return $executor->statement(
+                'default_dataset/insert.sql.twig',
+                null,
+                new Positional()
+                    ->integer(42)
+                    ->string('foo')
+                    ->string('bar'),
+                null,
+            );
+        });
+
+        $this->assertCount(1, $affected);
     }
 
     #[Test]
