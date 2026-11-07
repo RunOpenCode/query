@@ -158,7 +158,6 @@ final class Converted implements \IteratorAggregate, ResultInterface
      */
     public function free(): void
     {
-        // @phpstan-ignore-next-line
         if (!isset($this->result)) {
             return;
         }
@@ -212,7 +211,6 @@ final class Converted implements \IteratorAggregate, ResultInterface
     private function convert(array $row): array
     {
         // Already converted.
-        // @phpstan-ignore-next-line
         if (!isset($this->configuration)) {
             return $row;
         }

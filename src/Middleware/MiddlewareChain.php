@@ -95,6 +95,7 @@ final readonly class MiddlewareChain
     private function get(string $type): callable
     {
         if (!$this->chains->offsetExists($type)) {
+            // @phpstan-ignore-next-line argument.type
             $this->chains->offsetSet($type, $this->build($type));
         }
 

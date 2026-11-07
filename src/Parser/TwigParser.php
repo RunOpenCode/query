@@ -41,7 +41,7 @@ final class TwigParser implements ParserInterface
     /**
      * Create Twig parser.
      *
-     * @param Environment            $twig Twig environment to use.
+     * @param Environment            $twig     Twig environment to use.
      * @param list<non-empty-string> $patterns File patterns to support.
      */
     public function __construct(
@@ -129,9 +129,7 @@ final class TwigParser implements ParserInterface
     private function template(string $source): array
     {
         if (\str_contains($source, '::')) {
-            $parts = \explode('::', $source, 2);
-
-            return 2 === \count($parts) ? $parts : [$source, null];
+            return \explode('::', $source, 2);
         }
 
         return [$source, null];

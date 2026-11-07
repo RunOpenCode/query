@@ -141,7 +141,6 @@ final class Result implements \IteratorAggregate, ResultInterface
      */
     public function free(): void
     {
-        // @phpstan-ignore-next-line
         if (!isset($this->dataset)) {
             return;
         }
